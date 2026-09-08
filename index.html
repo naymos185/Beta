@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NayMos GameShop – ระบบบัญชีเต็มรูปแบบ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        brand: { 50:'#fef2f2',100:'#ffe1e1',500:'#ef4444',600:'#dc2626',700:'#b91c1c',900:'#7f1d1d',dark:'#0f0f11',card:'#18181c',border:'#27272a' }
+      }
+    }
+  }
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+body{font-family:'Prompt',sans-serif;background:#0d0d10;color:#f4f4f5}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#18181c}
+::-webkit-scrollbar-thumb{background:#3f3f46;border-radius:4px}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.tab-btn{color:#a1a1aa;border:1px solid transparent}
+.tab-btn:hover{color:#fff;background:#27272a}
+.tab-btn.active{color:#fff;background:#dc2626;border-color:#ef4444;box-shadow:0 4px 12px rgba(220,38,38,.3)}
+.profit-pos{color:#34d399}.profit-neg{color:#f87171}.profit-zero{color:#fbbf24}
+.rank-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.rank-bronze{background:linear-gradient(135deg,#78350f,#a16207);color:#fde68a;border:1px solid #b45309}
+.rank-silver{background:linear-gradient(135deg,#4b5563,#9ca3af);color:#f8fafc;border:1px solid #d1d5db;text-shadow:0 0 6px rgba(255,255,255,.35)}
+.rank-gold{background:linear-gradient(135deg,#a16207,#fbbf24);color:#422006;border:1px solid #fcd34d;box-shadow:0 0 8px rgba(251,191,36,.35)}
+.rank-platinum{background:linear-gradient(135deg,#0e7490,#67e8f9);color:#ecfeff;border:1px solid #a5f3fc;box-shadow:0 0 10px rgba(34,211,238,.4)}
+.rank-master{background:linear-gradient(135deg,#7f1d1d,#ef4444,#991b1b);color:#fff;border:1px solid #f87171;animation:rankGlow 1.8s ease-in-out infinite;text-shadow:0 0 8px rgba(239,68,68,.9)}
+.rank-vip{background:linear-gradient(135deg,#581c87,#c026d3,#7e22ce);color:#fdf4ff;border:1px solid #e879f9;animation:rankVip 2s ease-in-out infinite;text-shadow:0 0 10px rgba(232,121,249,.8)}
+.rank-admin{background:linear-gradient(135deg,#1e3a8a,#3b82f6,#1d4ed8);color:#eff6ff;border:1px solid #93c5fd;animation:rankAdmin 1.6s ease-in-out infinite;text-shadow:0 0 10px rgba(59,130,246,.9)}
+@keyframes rankGlow{0%,100%{box-shadow:0 0 6px #ef4444,0 0 14px rgba(239,68,68,.45)}50%{box-shadow:0 0 14px #f87171,0 0 28px rgba(248,113,113,.7)}}
+@keyframes rankVip{0%,100%{box-shadow:0 0 6px #c026d3,0 0 16px rgba(192,38,211,.4)}50%{box-shadow:0 0 16px #e879f9,0 0 32px rgba(232,121,249,.65)}}
+@keyframes rankAdmin{0%,100%{box-shadow:0 0 6px #3b82f6,0 0 14px rgba(59,130,246,.4)}50%{box-shadow:0 0 16px #60a5fa,0 0 28px rgba(96,165,250,.7)}}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- HEADER -->
+<header class="bg-brand-card border-b border-brand-border sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-3">
+        <img src="" alt="NayMos" class="w-11 h-11 rounded-full object-cover border-2 border-red-600 shadow-lg shadow-red-900/40">
+        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-800 hidden items-center justify-center text-white font-bold text-xl shadow-lg shadow-red-900/40">N</div>
+        <div>
+          <h1 class="text-lg font-bold text-white leading-tight">NayMos GameShop</h1>
+          <p class="text-xs text-red-400 font-medium">ระบบบัญชีเต็มรูปแบบ <span id="sync-status" class="text-[10px] text-emerald-400 ml-1">● Auto-Save</span></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportFullBackup()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition" title="สำรองข้อมูลทั้งหมด">
+          <i data-lucide="download" class="w-4 h-4"></i><span class="hidden sm:inline">สำรอง</span>
+        </button>
+        <button onclick="document.getElementById('import-backup-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition" title="นำเข้าข้อมูล">
+          <i data-lucide="upload" class="w-4 h-4"></i><span class="hidden sm:inline">นำเข้า</span>
+        </button>
+        <input type="file" id="import-backup-input" accept=".json,application/json" class="hidden" onchange="importFullBackup(event)">
+        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i><span class="hidden sm:inline">Excel</span>
+        </button>
+        <button onclick="openResetConfirm()" class="bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="trash-2" class="w-4 h-4"></i><span class="hidden md:inline">ล้างข้อมูล</span>
+        </button>
+      </div>
+    </div>
+    <nav class="flex space-x-1 overflow-x-auto pb-2 pt-1 border-t border-zinc-800/60 no-scrollbar">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</button>
+      <button onclick="switchTab('add-entry')" id="tab-add-entry" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="plus-circle" class="w-4 h-4"></i>เติมเกม</button>
+      <button onclick="switchTab('daily')" id="tab-daily" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="calendar-days" class="w-4 h-4"></i>ยอดรายวัน</button>
+      <button onclick="switchTab('manage-games')" id="tab-manage-games" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="gamepad-2" class="w-4 h-4"></i>จัดการเกม & แพ็ก</button>
+      <button onclick="switchTab('members')" id="tab-members" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="crown" class="w-4 h-4"></i>สมาชิก & คะแนน</button>
+      <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="history" class="w-4 h-4"></i>ประวัติรายการ</button>
+      <button onclick="switchTab('invoices')" id="tab-invoices" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap relative"><i data-lucide="file-text" class="w-4 h-4"></i>ใบแจ้งยอด <span id="invoice-badge" class="hidden ml-1 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span></button>
+      <button onclick="switchTab('slips')" id="tab-slips" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="receipt" class="w-4 h-4"></i>ประวัติสลิป</button>
+      <button onclick="switchTab('monthly')" id="tab-monthly" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="calendar-range" class="w-4 h-4"></i>สรุปรายเดือน</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-5 right-5 z-[100] bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+  <i data-lucide="check-circle" class="w-5 h-5"></i>
+  <span id="toast-message" class="text-sm font-medium">สำเร็จ</span>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<section id="view-dashboard" class="space-y-6">
+  <!-- Today / Yesterday -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gradient-to-br from-emerald-950/60 to-brand-card p-5 rounded-2xl border border-emerald-800/50">
+      <div class="flex items-center gap-2 text-emerald-400 text-sm font-semibold mb-4">
+        <i data-lucide="sun" class="w-5 h-5"></i>สรุปวันนี้
+        <span id="today-date-label" class="text-xs text-zinc-400 font-normal ml-auto"></span>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><p class="text-xs text-zinc-400">ยอดขาย</p><p id="dash-today-sales" class="text-xl font-bold text-white mt-1">฿0.00</p></div>
+        <div><p class="text-xs text-zinc-400">กำไร</p><p id="dash-today-profit" class="text-xl font-bold mt-1">฿0.00</p></div>
+        <div><p class="text-xs text-zinc-400">ออเดอร์</p><p id="dash-today-orders" class="text-xl font-bold text-white mt-1">0</p></div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-zinc-800">
+        <p class="text-xs text-zinc-400">เกมขายดีวันนี้: <span id="dash-today-topgame" class="text-amber-400 font-medium">-</span></p>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-zinc-900 to-brand-card p-5 rounded-2xl border border-zinc-700">
+      <div class="flex items-center gap-2 text-zinc-300 text-sm font-semibold mb-4">
+        <i data-lucide="moon" class="w-5 h-5"></i>สรุปเมื่อวาน
+        <span id="yesterday-date-label" class="text-xs text-zinc-500 font-normal ml-auto"></span>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><p class="text-xs text-zinc-500">ยอดขาย</p><p id="dash-yest-sales" class="text-xl font-bold text-zinc-200 mt-1">฿0.00</p></div>
+        <div><p class="text-xs text-zinc-500">กำไร</p><p id="dash-yest-profit" class="text-xl font-bold mt-1">฿0.00</p></div>
+        <div><p class="text-xs text-zinc-500">ออเดอร์</p><p id="dash-yest-orders" class="text-xl font-bold text-zinc-200 mt-1">0</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="bg-brand-card p-4 rounded-2xl border border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-2"><i data-lucide="filter" class="w-5 h-5 text-red-500"></i><h2 class="font-semibold text-lg text-white">เลือกช่วงเวลา</h2></div>
+    <div class="flex items-center gap-3">
+      <select id="dash-month" onchange="renderDashboard()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2">
+        <option value="ALL">ทุกเดือน</option>
+        <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option><option value="4">เม.ย.</option>
+        <option value="5">พ.ค.</option><option value="6">มิ.ย.</option><option value="7">ก.ค.</option><option value="8">ส.ค.</option>
+        <option value="9">ก.ย.</option><option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
+      </select>
+      <select id="dash-year" onchange="renderDashboard()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2"></select>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800"><p class="text-xs text-zinc-400">ยอดขายรวม</p><p id="dash-total-sales" class="text-lg font-bold text-white mt-1">฿0.00</p></div>
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800"><p class="text-xs text-zinc-400">ราคาในแอป</p><p id="dash-app-cost" class="text-lg font-bold text-amber-400 mt-1">฿0.00</p></div>
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800"><p class="text-xs text-zinc-400">เงินคืนรวม</p><p id="dash-cashback" class="text-lg font-bold text-emerald-400 mt-1">฿0.00</p></div>
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800"><p class="text-xs text-zinc-400">ต้นทุนสุทธิ</p><p id="dash-net-cost" class="text-lg font-bold text-amber-400 mt-1">฿0.00</p></div>
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800"><p class="text-xs text-zinc-400">กำไรขั้นต้น</p><p id="dash-gross-profit" class="text-lg font-bold mt-1">฿0.00</p></div>
+    <div class="bg-brand-card p-4 rounded-2xl border border-zinc-800">
+      <div class="flex items-center justify-between"><p class="text-xs text-zinc-400">ค่าใช้จ่าย</p>
+        <button onclick="openExpenseModal()" class="text-xs bg-red-600 hover:bg-red-500 text-white font-bold w-5 h-5 rounded-full">+</button>
+      </div>
+      <p id="dash-expenses" class="text-lg font-bold text-amber-500 mt-1">฿0.00</p>
+    </div>
+    <div class="bg-gradient-to-br from-red-950 to-brand-card p-4 rounded-2xl border border-red-800/80 col-span-2 sm:col-span-1">
+      <p class="text-xs text-red-300">กำไรสุทธิ</p><p id="dash-net-profit" class="text-xl font-black mt-1">฿0.00</p>
+    </div>
+  </div>
+
+  <!-- Top -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="bg-brand-card p-6 rounded-2xl border border-brand-border">
+      <div class="flex items-center gap-2 text-amber-400 text-sm font-semibold mb-3"><i data-lucide="trophy" class="w-5 h-5"></i>เกมทำกำไรสูงสุด</div>
+      <h3 id="dash-top-game-name" class="text-2xl font-bold text-white mb-1">-</h3>
+      <p id="dash-top-game-profit" class="text-lg font-semibold">กำไร ฿0.00</p>
+      <div class="mt-6 pt-4 border-t border-zinc-800 text-xs text-zinc-400 space-y-1">
+        <div class="flex justify-between"><span>จำนวนรายการ</span><span id="dash-total-tx" class="text-white">0</span></div>
+        <div class="flex justify-between"><span>อัตรากำไรเฉลี่ย</span><span id="dash-profit-margin" class="text-white">0%</span></div>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-amber-950/40 via-brand-card to-zinc-900 p-6 rounded-2xl border border-amber-800/60">
+      <div class="flex items-center gap-2 text-amber-400 text-sm font-semibold mb-3"><i data-lucide="crown" class="w-5 h-5"></i>สมาชิกเติมเยอะสุด</div>
+      <h3 id="dash-top-member-name" class="text-2xl font-bold text-amber-300 mb-1">-</h3>
+      <p id="dash-top-member-spend" class="text-lg font-semibold text-emerald-400">ยอด ฿0.00</p>
+      <div class="mt-6 pt-4 border-t border-zinc-800 text-xs text-zinc-400 space-y-1">
+        <div class="flex justify-between"><span>ออเดอร์</span><span id="dash-top-member-count" class="text-white">0</span></div>
+        <div class="flex justify-between"><span>กำไรจากสมาชิก</span><span id="dash-top-member-profit" class="text-emerald-400">฿0.00</span></div>
+      </div>
+    </div>
+    <div class="bg-brand-card p-6 rounded-2xl border border-brand-border">
+      <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-red-500"></i>สรุปแยกเกม</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-zinc-400 bg-zinc-900/60 uppercase border-b border-zinc-800">
+            <tr><th class="py-2 px-2">เกม</th><th class="py-2 px-2 text-center">ออเดอร์</th><th class="py-2 px-2 text-right">ยอดขาย</th><th class="py-2 px-2 text-right">กำไร</th></tr>
+          </thead>
+          <tbody id="dash-game-breakdown-body" class="divide-y divide-zinc-800/60"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DAILY ===================== -->
+<section id="view-daily" class="hidden space-y-6">
+  <div class="bg-brand-card p-5 rounded-2xl border border-brand-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="calendar-days" class="w-6 h-6 text-red-500"></i>ประวัติยอดขายรายวัน</h2>
+      <p class="text-xs text-zinc-400 mt-1">ดูสรุปยอดขาย กำไร ออเดอร์ย้อนหลัง</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <select id="daily-filter" onchange="renderDailySummary()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2">
+        <option value="7">7 วันล่าสุด</option>
+        <option value="14">14 วันล่าสุด</option>
+        <option value="30">30 วันล่าสุด</option>
+        <option value="this-month">เดือนนี้</option>
+        <option value="last-month">เดือนก่อน</option>
+        <option value="custom">เลือกวันที่เอง</option>
+      </select>
+      <input type="date" id="daily-custom-date" onchange="renderDailySummary()" class="hidden bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2">
+    </div>
+  </div>
+  <div id="daily-summary-list" class="space-y-3"></div>
+</section>
+
+<!-- ===================== ADD ENTRY ===================== -->
+<section id="view-add-entry" class="hidden max-w-3xl mx-auto space-y-6">
+  <div class="bg-brand-card p-6 sm:p-8 rounded-2xl border border-brand-border shadow-xl">
+    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800 justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-3 bg-red-600/20 text-red-500 rounded-xl"><i data-lucide="plus-circle" class="w-6 h-6"></i></div>
+        <div>
+          <h2 class="text-xl font-bold text-white">บันทึกรายการเติมเกม</h2>
+          <p class="text-xs text-zinc-400">เลือกเกม+แพ็ก ระบบคำนวณกำไร Real-time</p>
+        </div>
+      </div>
+      <span id="draft-indicator" class="hidden text-[11px] text-amber-400 bg-amber-950/80 border border-amber-800 px-2.5 py-1 rounded-lg">✍️ มีร่าง</span>
+    </div>
+    <form id="add-transaction-form" onsubmit="handleSaveTransaction(event)" class="space-y-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">วันที่</label>
+          <input type="date" id="form-date" required onchange="saveDraftForm()" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm focus:ring-2 focus:ring-red-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">เวลา</label>
+          <input type="time" id="form-time" required onchange="saveDraftForm()" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm focus:ring-2 focus:ring-red-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1.5">1. เลือกเกม <span class="text-red-500">*</span></label>
+        <select id="form-game" onchange="onFormGameChange();saveDraftForm()" required class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm font-medium">
+          <option value="">-- เลือกเกม --</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1.5">2. เลือกแพ็กเกจ <span class="text-red-500">*</span></label>
+        <select id="form-package-select" onchange="onFormPackageChange();saveDraftForm()" disabled class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm disabled:opacity-50">
+          <option value="">-- เลือกเกมก่อน --</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1.5">รายละเอียดเพิ่มเติม</label>
+        <input type="text" id="form-item" oninput="saveDraftForm()" placeholder="เช่น 86 Diamonds" required class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">ราคาที่รับจากลูกค้า <span class="text-red-500">*</span></label>
+          <input type="number" step="any" id="form-customer-price" oninput="updateFormCalculations();saveDraftForm()" required class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm font-semibold text-emerald-400">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">ราคาเต็มในแอป <span class="text-red-500">*</span></label>
+          <input type="number" step="any" id="form-app-price" oninput="updateFormCalculations();saveDraftForm()" required class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm font-semibold text-amber-400">
+        </div>
+      </div>
+      <div class="p-4 bg-zinc-900/90 rounded-2xl border border-zinc-800 space-y-2.5 text-xs">
+        <div class="flex justify-between text-zinc-400"><span>อัตราเงินคืน</span><span id="preview-cashback-rate" class="text-white font-bold">0%</span></div>
+        <div class="flex justify-between text-zinc-400"><span>เงินคืน</span><span id="preview-cashback-amount" class="text-emerald-400 font-bold">฿0.00</span></div>
+        <div class="flex justify-between text-zinc-400"><span>ต้นทุนสุทธิ</span><span id="preview-net-cost" class="text-amber-400 font-bold">฿0.00</span></div>
+        <div class="pt-2 border-t border-zinc-800 flex justify-between items-center text-sm font-bold">
+          <span class="text-zinc-200">กำไร/ขาดทุน</span>
+          <div class="text-right"><span id="preview-profit" class="text-lg block">฿0.00</span><span id="preview-profit-margin" class="text-[11px] text-zinc-400 font-normal">0%</span></div>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1.5">สมาชิก <span class="text-zinc-500 font-normal">(ได้คะแนนเมื่อยอดถึงเกณฑ์)</span></label>
+        <select id="form-member-select" onchange="updatePointPreview();updateDiscountOption();loadMemberSavedUids()" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm">
+          <option value="">-- ไม่ระบุ --</option>
+        </select>
+        <p id="point-preview-hint" class="text-[11px] mt-1.5 text-zinc-500 hidden"></p>
+        <div id="discount-use-box" class="hidden mt-2 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl space-y-2">
+          <label class="flex items-center gap-2 text-xs text-amber-200 cursor-pointer">
+            <input type="checkbox" id="form-use-discount" onchange="updateDiscountOption()" class="rounded border-amber-600 text-amber-500 focus:ring-amber-500">
+            <span>ใช้ส่วนลดจากกระเป๋า <span id="form-wallet-balance" class="font-bold text-amber-400">฿0</span></span>
+          </label>
+          <div id="discount-amount-row" class="hidden flex items-center gap-2">
+            <span class="text-[11px] text-zinc-400">ใช้ส่วนลด</span>
+            <input type="number" step="any" min="0" id="form-discount-amount" oninput="updateDiscountOption()" class="w-28 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-amber-400 font-semibold">
+            <span class="text-[11px] text-zinc-500">บาท (ยอดชำระหลังส่วนลด: <span id="form-pay-after-discount" class="text-emerald-400 font-bold">฿0</span>)</span>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">UID / ID ที่เติม</label>
+          <select id="form-uid-saved" onchange="onSavedUidSelect()" class="w-full h-10 mb-1.5 bg-zinc-900 border border-zinc-700 rounded-xl px-3 text-white text-xs">
+            <option value="">-- UID ที่บันทึกไว้ (เลือกสมาชิกก่อน) --</option>
+          </select>
+          <input type="text" id="form-uid" placeholder="เช่น 12345678 (2001)" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm">
+          <label class="flex items-center gap-2 mt-1.5 text-[11px] text-zinc-400 cursor-pointer">
+            <input type="checkbox" id="form-save-uid" class="rounded border-zinc-600 text-red-500" checked>
+            บันทึก UID นี้ให้สมาชิก (ถ้ามีสมาชิก)
+          </label>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1.5">จำนวนเพชร/สกุลเงินที่ได้</label>
+          <input type="text" id="form-currency-amount" placeholder="เช่น 706 Diamonds" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1.5">หมายเหตุ</label>
+        <input type="text" id="form-notes" oninput="saveDraftForm()" class="w-full h-11 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 text-white text-sm">
+      </div>
+      <button type="submit" class="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2">
+        <i data-lucide="file-text" class="w-5 h-5"></i>สร้างใบแจ้งยอด
+      </button>
+    </form>
+  </div>
+</section>
+
+<!-- ===================== MANAGE GAMES & PACKAGES ===================== -->
+<section id="view-manage-games" class="hidden space-y-6">
+  <div class="bg-brand-card p-5 rounded-2xl border border-brand-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="gamepad-2" class="w-6 h-6 text-red-500"></i>จัดการเกม แพ็กเกม และ % เงินคืน</h2>
+      <p class="text-xs text-zinc-400 mt-1">ตั้งค่าเกม / % Cashback / แพ็ก / ราคาขาย / ต้นทุน / กำไร Real-time (กดแก้ไขเกมเพื่อตั้ง % เงินคืน)</p>
+    </div>
+    <div class="flex items-center gap-3 w-full md:w-auto">
+      <input type="text" id="manage-game-search" oninput="renderGameManagementList()" placeholder="🔍 ค้นหาเกม..." class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-xl px-3.5 py-2.5 w-full md:w-48">
+      <button onclick="openAddGameModal()" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 whitespace-nowrap shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>เพิ่มเกม
+      </button>
+    </div>
+  </div>
+
+  <div id="game-management-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+  <!-- Package Panel -->
+  <div id="package-management-panel" class="hidden bg-brand-card rounded-2xl border border-brand-border p-6 space-y-5">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-800 pb-4">
+      <div class="flex items-center gap-3">
+        <button onclick="closePackagePanel()" class="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+        <div>
+          <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            <span id="active-game-icon">🎮</span> <span id="active-game-name">Game</span>
+          </h3>
+          <p class="text-xs text-zinc-400">สกุลเงิน: <span id="active-game-currency" class="text-red-400 font-semibold">-</span> | Cashback: <span id="active-game-rate" class="text-emerald-400 font-semibold">0%</span></p>
+        </div>
+      </div>
+      <button onclick="openAddPackageModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>+ เพิ่มแพ็ก
+      </button>
+    </div>
+    <div class="flex justify-between items-center">
+      <p class="text-xs text-zinc-400">รายการแพ็กเกจทั้งหมด</p>
+      <input type="text" id="package-search-input" oninput="renderActiveGamePackages()" placeholder="🔍 ค้นหาแพ็ก..." class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-xl px-3 py-2 w-48">
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-zinc-900/90 text-zinc-400 uppercase border-b border-zinc-800">
+          <tr>
+            <th class="p-3">ชื่อแพ็ก</th>
+            <th class="p-3 text-center">จำนวน</th>
+            <th class="p-3 text-right">ราคาขาย</th>
+            <th class="p-3 text-right">ราคาต้นทุน</th>
+            <th class="p-3 text-right font-bold">กำไร Real-time</th>
+            <th class="p-3 text-center">สถานะ</th>
+            <th class="p-3 text-center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="package-table-body" class="divide-y divide-zinc-800 text-zinc-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MEMBERS ===================== -->
+<section id="view-members" class="hidden space-y-6">
+  <div class="bg-brand-card p-5 rounded-2xl border border-brand-border space-y-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="crown" class="w-6 h-6 text-amber-400"></i>ระบบสมาชิก คะแนน และแรงค์</h2>
+        <p class="text-xs text-zinc-400 mt-1">คะแนน · ส่วนลด · แรงค์ตามยอดเติม · เรียงลำดับ</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="openAddMemberModal()" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="user-plus" class="w-4 h-4"></i>เพิ่มสมาชิก</button>
+        <button onclick="openPointsModal()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="sparkles" class="w-4 h-4"></i>คะแนน</button>
+        <button onclick="openWalletModal()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="wallet" class="w-4 h-4"></i>ส่วนลด</button>
+        <button onclick="openRankModal()" class="bg-purple-700 hover:bg-purple-600 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="award" class="w-4 h-4"></i>ปรับแรงค์</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">เป้าหมายคะแนน</div>
+        <input type="number" id="setting-points-target" value="10" min="1" max="500" onchange="updatePointsTargetSetting()" class="w-full bg-zinc-800 text-amber-400 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">ยอดขั้นต่ำได้ 1 แต้ม</div>
+        <input type="number" id="setting-min-amount-point" value="100" min="0" step="any" onchange="updateMinAmountForPoint()" class="w-full bg-zinc-800 text-emerald-400 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">ส่วนลดผู้แนะนำ</div>
+        <input type="number" id="setting-referral-discount" value="10" min="0" step="any" onchange="updateReferralDiscount()" class="w-full bg-zinc-800 text-amber-400 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">Silver ≥</div>
+        <input type="number" id="rank-th-silver" value="1000" min="0" onchange="updateRankThresholds()" class="w-full bg-zinc-800 text-slate-200 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">Gold ≥</div>
+        <input type="number" id="rank-th-gold" value="5000" min="0" onchange="updateRankThresholds()" class="w-full bg-zinc-800 text-amber-300 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">Platinum ≥</div>
+        <input type="number" id="rank-th-platinum" value="15000" min="0" onchange="updateRankThresholds()" class="w-full bg-zinc-800 text-cyan-300 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+      <div class="bg-zinc-900 border border-zinc-700 px-2.5 py-2 rounded-xl">
+        <div class="text-zinc-400 mb-1">Master ≥</div>
+        <input type="number" id="rank-th-master" value="50000" min="0" onchange="updateRankThresholds()" class="w-full bg-zinc-800 text-red-400 font-bold border border-zinc-600 rounded px-2 py-1 text-center">
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 text-[10px]">
+      <span class="rank-badge rank-bronze">BRONZE</span>
+      <span class="rank-badge rank-silver">SILVER</span>
+      <span class="rank-badge rank-gold">GOLD</span>
+      <span class="rank-badge rank-platinum">PLATINUM</span>
+      <span class="rank-badge rank-master">MASTER</span>
+      <span class="rank-badge rank-vip">VIP</span>
+      <span class="rank-badge rank-admin">ADMIN</span>
+    </div>
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="p-4 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <h3 class="text-sm font-semibold text-white">รายชื่อสมาชิก</h3>
+      <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <select id="member-sort" onchange="renderMembersList()" class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-xl px-3 py-1.5">
+          <option value="rank">เรียงตามแรงค์</option>
+          <option value="newest">สมัครใหม่สุด</option>
+          <option value="oldest">สมัครเก่าสุด</option>
+          <option value="spent_desc">ยอดเติมมากสุด</option>
+          <option value="spent_asc">ยอดเติมน้อยสุด</option>
+          <option value="profit_desc">กำไรจากสมาชิกมากสุด</option>
+        </select>
+        <input type="text" id="member-search-input" oninput="renderMembersList()" placeholder="🔍 ค้นหา..." class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-xl px-3 py-1.5 w-40 sm:w-48">
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-zinc-900/90 text-zinc-400 uppercase border-b border-zinc-800">
+          <tr>
+            <th class="p-3.5">ชื่อ / แรงค์</th>
+            <th class="p-3.5">ติดต่อ</th>
+            <th class="p-3.5 text-center">ออเดอร์</th>
+            <th class="p-3.5 text-right">ยอดเติม</th>
+            <th class="p-3.5 text-right">กำไรให้ร้าน</th>
+            <th class="p-3.5 text-right">กระเป๋าส่วนลด</th>
+            <th class="p-3.5 text-center">คะแนน</th>
+            <th class="p-3.5 w-1/5">ความคืบหน้า</th>
+            <th class="p-3.5 text-center">สถานะ & แลกรางวัล</th>
+            <th class="p-3.5 text-center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="members-table-body" class="divide-y divide-zinc-800 text-zinc-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== HISTORY ===================== -->
+<section id="view-history" class="hidden space-y-4">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-brand-card p-4 rounded-2xl border border-brand-border">
+    <div>
+      <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="database" class="w-5 h-5 text-red-500"></i>ประวัติรายการทั้งหมด</h2>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <select id="history-filter-type" onchange="renderHistoryTable()" class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-lg px-3 py-2">
+        <option value="ALL">ทั้งหมด</option>
+        <option value="TX">เติมเกม</option>
+        <option value="EXP">ค่าใช้จ่าย</option>
+      </select>
+      <input type="text" id="history-search" oninput="renderHistoryTable()" placeholder="ค้นหา..." class="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-lg px-3 py-2 w-40">
+    </div>
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-zinc-900/80 text-zinc-400 uppercase border-b border-zinc-800">
+          <tr>
+            <th class="p-3">ประเภท</th><th class="p-3">เลขรายการ</th><th class="p-3">วันที่/เวลา</th>
+            <th class="p-3">เกม/รายการ</th><th class="p-3">รายละเอียด</th>
+            <th class="p-3 text-right">ราคาลูกค้า</th><th class="p-3 text-right">ราคาแอป</th>
+            <th class="p-3 text-center">%คืน</th><th class="p-3 text-right">เงินคืน</th>
+            <th class="p-3 text-right">ต้นทุนสุทธิ</th><th class="p-3 text-right font-bold">กำไร</th>
+            <th class="p-3 text-center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body" class="divide-y divide-zinc-800/60 text-zinc-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CASHBACK ===================== -->
+<section id="view-games" class="hidden space-y-6">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-brand-card p-4 rounded-2xl border border-brand-border">
+    <div>
+      <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="percent" class="w-5 h-5 text-red-500"></i>ตั้งค่าอัตราเงินคืน</h2>
+    </div>
+    <button onclick="openAddGameModal()" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2">
+      <i data-lucide="plus" class="w-4 h-4"></i>เพิ่มเกม
+    </button>
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-zinc-900 text-zinc-400 uppercase text-xs border-b border-zinc-800">
+          <tr><th class="p-4">ชื่อเกม</th><th class="p-4 text-center">% เงินคืน</th><th class="p-4 text-center">สถานะ</th><th class="p-4">หมายเหตุ</th><th class="p-4 text-center">จัดการ</th></tr>
+        </thead>
+        <tbody id="games-table-body" class="divide-y divide-zinc-800"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== INVOICES (ใบแจ้งยอด) ===================== -->
+<section id="view-invoices" class="hidden space-y-4">
+  <div class="bg-brand-card p-4 rounded-2xl border border-brand-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5 text-amber-400"></i>ใบแจ้งยอด</h2>
+      <p class="text-xs text-zinc-400 mt-1">รอชำระ → ยืนยันแล้วกลายเป็นสลิป | <span id="invoice-pending-hint" class="text-amber-400 font-medium">ค้างชำระ 0 รายการ</span></p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <select id="invoice-filter" onchange="renderInvoicesList()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-xl px-3 py-2">
+        <option value="pending">รอชำระ</option>
+        <option value="all">ทั้งหมด</option>
+        <option value="paid">ชำระแล้ว</option>
+        <option value="cancelled">ยกเลิก</option>
+      </select>
+      <input type="text" id="invoice-search" oninput="renderInvoicesList()" placeholder="🔍 ค้นหา" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-xl px-3 py-2 w-40 sm:w-52">
+    </div>
+  </div>
+  <div id="invoice-alert-banner" class="hidden bg-amber-950/50 border border-amber-700/60 rounded-xl px-4 py-3 flex items-center gap-3">
+    <span class="text-amber-400 text-lg">⚠️</span>
+    <p class="text-sm text-amber-200"><span id="invoice-alert-text">มียอดค้างชำระ</span></p>
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-zinc-900/90 text-zinc-400 uppercase border-b border-zinc-800">
+          <tr>
+            <th class="p-3">เลขที่</th>
+            <th class="p-3">วันเวลา</th>
+            <th class="p-3">สมาชิก</th>
+            <th class="p-3">เกม / แพ็ก</th>
+            <th class="p-3">UID</th>
+            <th class="p-3 text-right">ยอด</th>
+            <th class="p-3 text-center">สถานะ</th>
+            <th class="p-3 text-center">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="invoices-table-body" class="divide-y divide-zinc-800 text-zinc-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SLIPS HISTORY ===================== -->
+<section id="view-slips" class="hidden space-y-4">
+  <div class="bg-brand-card p-4 rounded-2xl border border-brand-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="receipt" class="w-5 h-5 text-red-500"></i>ประวัติสลิป</h2>
+      <p class="text-xs text-zinc-400 mt-1">ดูสลิปย้อนหลัง ค้นหา เปิดดูอีกครั้ง</p>
+    </div>
+    <input type="text" id="slip-search" oninput="renderSlipsList()" placeholder="🔍 ค้นหา ชื่อ / UID / เกม / เลขสลิป" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-xl px-3 py-2 w-full sm:w-72">
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-zinc-900/90 text-zinc-400 uppercase border-b border-zinc-800">
+          <tr>
+            <th class="p-3">เลขสลิป</th>
+            <th class="p-3">วันเวลา</th>
+            <th class="p-3">สมาชิก</th>
+            <th class="p-3">เกม / แพ็ก</th>
+            <th class="p-3">UID</th>
+            <th class="p-3 text-right">ยอดชำระ</th>
+            <th class="p-3 text-center">เปิด</th>
+          </tr>
+        </thead>
+        <tbody id="slips-table-body" class="divide-y divide-zinc-800 text-zinc-200"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MONTHLY ===================== -->
+<section id="view-monthly" class="hidden space-y-6">
+  <div class="bg-brand-card p-4 rounded-2xl border border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="calendar-range" class="w-5 h-5 text-red-500"></i>สรุปรายเดือน</h2>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="monthly-month" onchange="renderMonthlySummary()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2">
+        <option value="1">ม.ค.</option><option value="2">ก.พ.</option><option value="3">มี.ค.</option><option value="4">เม.ย.</option>
+        <option value="5">พ.ค.</option><option value="6">มิ.ย.</option><option value="7">ก.ค.</option><option value="8">ส.ค.</option>
+        <option value="9">ก.ย.</option><option value="10">ต.ค.</option><option value="11">พ.ย.</option><option value="12">ธ.ค.</option>
+      </select>
+      <select id="monthly-year" onchange="renderMonthlySummary()" class="bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-3 py-2"></select>
+    </div>
+  </div>
+  <div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-zinc-900 text-zinc-400 uppercase text-xs border-b border-zinc-800">
+          <tr>
+            <th class="p-4">เกม</th><th class="p-4 text-center">รายการ</th><th class="p-4 text-right">ยอดขาย</th>
+            <th class="p-4 text-right">ราคาแอป</th><th class="p-4 text-right text-emerald-400">เงินคืน</th>
+            <th class="p-4 text-right text-amber-400">ต้นทุนสุทธิ</th><th class="p-4 text-right font-bold">กำไร</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-table-body" class="divide-y divide-zinc-800"></tbody>
+        <tfoot id="monthly-table-foot" class="bg-zinc-900/90 font-bold border-t-2 border-zinc-700"></tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="bg-brand-card border-t border-brand-border py-4 text-center text-xs text-zinc-500">
+  © 2026 NayMos GameShop – Full Version
+</footer>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Confirm Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-red-900 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+    <div class="w-14 h-14 bg-red-950 border border-red-800 rounded-2xl flex items-center justify-center mx-auto text-red-500">
+      <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+    </div>
+    <h3 id="confirm-title" class="text-lg font-bold text-white">ยืนยัน?</h3>
+    <p id="confirm-message" class="text-sm text-zinc-400">ไม่สามารถย้อนกลับได้</p>
+    <div class="flex gap-3 pt-2">
+      <button onclick="closeConfirmModal()" class="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold rounded-xl">ยกเลิก</button>
+      <button id="confirm-yes-btn" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Modal -->
+<div id="game-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <h3 id="game-modal-title" class="text-lg font-bold text-white">เพิ่มเกมใหม่</h3>
+    <form id="game-form" onsubmit="handleSaveGame(event)" class="space-y-4">
+      <input type="hidden" id="modal-game-id">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">ชื่อเกม *</label>
+        <input type="text" id="modal-game-name" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">URL รูปปกเกม</label>
+        <input type="text" id="modal-game-cover" placeholder="https://..." class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">ไอคอน</label>
+          <input type="text" id="modal-game-icon" placeholder="💎" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">สกุลเงิน</label>
+          <input type="text" id="modal-game-currency" placeholder="Diamond" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">% เงินคืน *</label>
+        <input type="number" step="any" id="modal-game-rate" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">สถานะ</label>
+        <select id="modal-game-status" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+          <option value="เปิดใช้งาน">เปิดใช้งาน</option>
+          <option value="ปิดใช้งาน">ปิดใช้งาน</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">หมายเหตุ</label>
+        <input type="text" id="modal-game-notes" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeGameModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs rounded-xl">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Package Modal -->
+<div id="package-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+    <h3 id="package-modal-title" class="text-lg font-bold text-white">เพิ่มแพ็กเกจ</h3>
+    <form onsubmit="handleSavePackage(event)" class="space-y-4">
+      <input type="hidden" id="modal-package-id">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">ชื่อแพ็ก *</label>
+        <input type="text" id="pkg-name" required placeholder="เช่น 86 Diamonds" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">จำนวน</label>
+          <input type="number" id="pkg-amount" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">หน่วย</label>
+          <input type="text" id="pkg-unit" placeholder="Diamond" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">ราคาขาย (ลูกค้าจ่าย) *</label>
+          <input type="number" step="any" id="pkg-customer-price" oninput="updateModalProfitPreview()" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm font-semibold text-emerald-400">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">ราคาต้นทุน (แอป) *</label>
+          <input type="number" step="any" id="pkg-app-price" oninput="updateModalProfitPreview()" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm font-semibold text-amber-400">
+        </div>
+      </div>
+      <div class="p-3 bg-zinc-900 rounded-xl border border-zinc-800 text-xs flex justify-between items-center">
+        <span class="text-zinc-400">กำไรคาดการณ์:</span>
+        <span id="modal-pkg-profit-preview" class="font-bold">฿0.00</span>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">สถานะ</label>
+        <select id="pkg-status" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+          <option value="เปิดขาย">เปิดขาย</option>
+          <option value="ปิดขาย">ปิดขาย</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closePackageModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl">บันทึกแพ็ก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Member Modal -->
+<div id="member-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <h3 class="text-lg font-bold text-white">เพิ่มสมาชิกใหม่</h3>
+    <form onsubmit="handleSaveMember(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">ชื่อสมาชิก *</label>
+        <input type="text" id="mem-name" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เบอร์ / Line</label>
+        <input type="text" id="mem-contact" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">คะแนนเริ่มต้น</label>
+        <input type="number" id="mem-points" value="0" min="0" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">สมาชิกที่แนะนำ (Referral)</label>
+        <select id="mem-referred-by" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+          <option value="">-- ไม่มีผู้แนะนำ --</option>
+        </select>
+        <p class="text-[10px] text-zinc-500 mt-1">ผู้แนะนำจะได้รับส่วนลดเข้ากระเป๋าตามที่ตั้งค่าไว้</p>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">หมายเหตุ</label>
+        <input type="text" id="mem-notes" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeMemberModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs rounded-xl">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Slip Modal -->
+<div id="slip-modal" class="hidden fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white text-zinc-900 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+    <div id="slip-content" class="p-6 space-y-4">
+      <div class="flex items-center gap-3 border-b border-zinc-200 pb-4">
+        <img src="" alt="NayMos Logo" class="w-14 h-14 rounded-full object-cover border-2 border-red-600">
+        <div>
+          <h2 class="text-lg font-black text-red-600 tracking-wide">NAYMOS GAMESHOP</h2>
+          <p class="text-xs text-zinc-500">เติมเกมไว ได้ราคาดี | ปลอดภัย รวดเร็ว เชื่อถือได้</p>
+        </div>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-zinc-500">ใบเสร็จ / สลิปเติมเกม</p>
+        <p id="slip-id" class="text-sm font-mono font-bold text-zinc-800"></p>
+        <p id="slip-datetime" class="text-xs text-zinc-500"></p>
+      </div>
+      <div class="space-y-2 text-sm border border-zinc-200 rounded-xl p-4 bg-zinc-50">
+        <div class="flex justify-between"><span class="text-zinc-500">สมาชิก</span><span id="slip-member" class="font-semibold">Unknown</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">เกม</span><span id="slip-game" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">แพ็กเกจ</span><span id="slip-package" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">UID / ID</span><span id="slip-uid" class="font-mono font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">ได้รับ</span><span id="slip-currency" class="font-semibold text-red-600"></span></div>
+        <div class="border-t border-dashed border-zinc-300 my-2"></div>
+        <div class="flex justify-between"><span class="text-zinc-500">ราคาเต็ม</span><span id="slip-full-price" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">ส่วนลด</span><span id="slip-discount" class="font-semibold text-emerald-600">฿0.00</span></div>
+        <div class="flex justify-between text-base"><span class="font-bold text-zinc-800">ยอดชำระ</span><span id="slip-pay" class="font-black text-red-600"></span></div>
+        <div id="slip-bonus-row" class="hidden pt-2 border-t border-zinc-200">
+          <p id="slip-bonus" class="text-xs text-amber-600 font-medium"></p>
+        </div>
+      </div>
+      <p class="text-[10px] text-center text-zinc-400">ขอบคุณที่ใช้บริการ NayMos GameShop</p>
+    </div>
+    <div id="slip-image-preview" class="hidden p-4 bg-zinc-100 border-t border-zinc-200 space-y-3">
+      <p class="text-sm font-semibold text-zinc-800 text-center">✅ สร้างรูปสลิปแล้ว</p>
+      <p class="text-xs text-zinc-600 text-center">มือถือ/iPad: <b>กดค้างที่รูป</b> แล้วเลือก “บันทึกรูปภาพ”</p>
+      <img id="slip-preview-img" src="" alt="สลิป" class="w-full rounded-xl border border-zinc-300 shadow">
+      <a id="slip-download-link" href="#" download="slip.png" class="block text-center text-sm text-red-600 font-semibold underline">หรือแตะที่นี่เพื่อดาวน์โหลด</a>
+    </div>
+    <div class="flex flex-col gap-2 p-4 bg-zinc-100 border-t border-zinc-200">
+      <button onclick="copyCustomerMessage('slip')" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl">📋 คัดลอกข้อความส่งไลน์</button>
+      <div class="flex gap-2">
+        <button onclick="closeSlipModal()" class="flex-1 py-2.5 bg-zinc-300 hover:bg-zinc-400 text-zinc-800 text-sm font-semibold rounded-xl">ปิด</button>
+        <button onclick="saveSlipAsImage()" id="btn-save-slip" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl">📷 บันทึกรูปสลิป</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Modal ใบแจ้งยอด -->
+<div id="invoice-modal" class="hidden fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white text-zinc-900 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+    <div id="invoice-content" class="p-6 space-y-4">
+      <div class="flex items-center gap-3 border-b border-zinc-200 pb-4">
+        <img id="invoice-logo-img" src="" alt="NayMos Logo" class="w-14 h-14 rounded-full object-cover border-2 border-red-600">
+        <div>
+          <h2 class="text-lg font-black text-red-600 tracking-wide">NAYMOS GAMESHOP</h2>
+          <p class="text-xs text-zinc-500">ใบแจ้งยอด / รอชำระเงิน</p>
+        </div>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-amber-600 font-bold uppercase tracking-wide">รอชำระเงิน</p>
+        <p id="inv-id" class="text-sm font-mono font-bold text-zinc-800"></p>
+        <p id="inv-datetime" class="text-xs text-zinc-500"></p>
+      </div>
+      <div class="space-y-2 text-sm border border-zinc-200 rounded-xl p-4 bg-zinc-50">
+        <div class="flex justify-between"><span class="text-zinc-500">สมาชิก</span><span id="inv-member" class="font-semibold">Unknown</span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">เกม</span><span id="inv-game" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">แพ็กเกจ</span><span id="inv-package" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">UID / ID</span><span id="inv-uid" class="font-mono font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">จะได้รับ</span><span id="inv-currency" class="font-semibold text-red-600"></span></div>
+        <div class="border-t border-dashed border-zinc-300 my-2"></div>
+        <div class="flex justify-between"><span class="text-zinc-500">ราคาเต็ม</span><span id="inv-full-price" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-zinc-500">ส่วนลด</span><span id="inv-discount" class="font-semibold text-emerald-600">฿0.00</span></div>
+        <div class="flex justify-between text-base"><span class="font-bold text-zinc-800">ยอดที่ต้องชำระ</span><span id="inv-pay" class="font-black text-red-600"></span></div>
+      </div>
+      <p class="text-[10px] text-center text-zinc-400">กรุณาชำระเงินตามยอด แล้วแจ้งสลิปโอนกลับร้าน</p>
+    </div>
+    <div id="invoice-image-preview" class="hidden p-4 bg-zinc-100 border-t border-zinc-200 space-y-3">
+      <p class="text-sm font-semibold text-zinc-800 text-center">✅ สร้างรูปใบแจ้งยอดแล้ว</p>
+      <p class="text-xs text-zinc-600 text-center">มือถือ/iPad: <b>กดค้างที่รูป</b> แล้วเลือก “บันทึกรูปภาพ”</p>
+      <img id="invoice-preview-img" src="" alt="ใบแจ้งยอด" class="w-full rounded-xl border border-zinc-300 shadow">
+    </div>
+    <div class="flex flex-col gap-2 p-4 bg-zinc-100 border-t border-zinc-200">
+      <button onclick="copyCustomerMessage('invoice')" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl">📋 คัดลอกข้อความส่งไลน์</button>
+      <button onclick="saveInvoiceAsImage()" id="btn-save-invoice" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl">📷 บันทึกรูปใบแจ้งยอด</button>
+      <div class="flex gap-2">
+        <button onclick="cancelInvoiceFromModal()" class="flex-1 py-2.5 bg-zinc-300 hover:bg-zinc-400 text-zinc-800 text-sm font-semibold rounded-xl">ยกเลิก</button>
+        <button onclick="confirmInvoicePaidFromModal()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl">✅ ชำระแล้ว</button>
+      </div>
+      <button onclick="closeInvoiceModal()" class="w-full py-2 text-xs text-zinc-500">ปิดหน้าต่าง (ยังค้างชำระ)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Points Modal -->
+<div id="points-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i>ปรับคะแนนสมาชิก</h3>
+    <form onsubmit="handleAdjustPoints(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เลือกสมาชิก *</label>
+        <select id="adj-member-select" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">การดำเนินการ</label>
+          <select id="adj-action" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <option value="add">+ เพิ่มคะแนน</option>
+            <option value="deduct">- หักคะแนน</option>
+            <option value="reset">🔄 รีเซ็ตเป็น 0</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">จำนวน</label>
+          <input type="number" id="adj-amount" value="1" min="1" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เหตุผล</label>
+        <input type="text" id="adj-reason" placeholder="เช่น แลกรางวัล, กิจกรรม" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closePointsModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded-xl">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rank Modal -->
+<div id="rank-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="award" class="w-5 h-5 text-purple-400"></i>ตั้งค่าแรงค์สมาชิก</h3>
+    <form onsubmit="handleSetRank(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เลือกสมาชิก *</label>
+        <select id="rank-member-select" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm"></select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">แรงค์</label>
+        <select id="rank-value" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+          <option value="auto">อัตโนมัติตามยอดเติม</option>
+          <option value="bronze">Bronze</option>
+          <option value="silver">Silver</option>
+          <option value="gold">Gold</option>
+          <option value="platinum">Platinum</option>
+          <option value="master">Master</option>
+          <option value="vip">VIP</option>
+          <option value="admin">Admin</option>
+        </select>
+        <p class="text-[10px] text-zinc-500 mt-1">VIP / Admin ตั้งเองเท่านั้น · Master ขึ้นอัตโนมัติเมื่อยอดถึงเกณฑ์</p>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeRankModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs rounded-xl">บันทึกแรงค์</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Wallet Discount Modal -->
+<div id="wallet-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="wallet" class="w-5 h-5 text-emerald-400"></i>เพิ่ม / ลบ ส่วนลดสมาชิก</h3>
+    <form onsubmit="handleAdjustWallet(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เลือกสมาชิก *</label>
+        <select id="wallet-member-select" required onchange="updateWalletBalanceLabel()" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm"></select>
+        <p class="text-[11px] text-zinc-400 mt-1">ยอดในกระเป๋าปัจจุบัน: <span id="wallet-current-balance" class="text-amber-400 font-bold">฿0.00</span></p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">การดำเนินการ</label>
+          <select id="wallet-action" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+            <option value="add">+ เพิ่มส่วนลด</option>
+            <option value="deduct">- ลบส่วนลด</option>
+            <option value="set">ตั้งยอดใหม่</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">จำนวนเงิน (บาท)</label>
+          <input type="number" step="any" min="0" id="wallet-amount" value="10" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm font-semibold text-amber-400">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">เหตุผล</label>
+        <input type="text" id="wallet-reason" placeholder="เช่น โปรโมชั่น, ชดเชย, ใช้ส่วนลด" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeWalletModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div id="expense-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-brand-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+    <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="receipt" class="w-5 h-5 text-amber-500"></i>บันทึกค่าใช้จ่าย</h3>
+    <form onsubmit="handleSaveExpense(event)" class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">วันที่</label>
+          <input type="date" id="exp-date" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-zinc-300 mb-1">เวลา</label>
+          <input type="time" id="exp-time" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">รายการ *</label>
+        <input type="text" id="exp-title" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">จำนวนเงิน *</label>
+        <input type="number" step="any" id="exp-amount" required class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm font-semibold text-amber-400">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-zinc-300 mb-1">หมายเหตุ</label>
+        <input type="text" id="exp-notes" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeExpenseModal()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded-xl">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Modal -->
+<div id="reset-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-brand-card border border-red-900 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+    <div class="w-12 h-12 bg-red-950 border border-red-800 rounded-2xl flex items-center justify-center mx-auto text-red-500">
+      <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+    </div>
+    <h3 class="text-lg font-bold text-white">ยืนยันล้างข้อมูลทั้งหมด?</h3>
+    <p class="text-xs text-zinc-400">จะลบประวัติเติมเกม ค่าใช้จ่าย สมาชิก ทั้งหมด</p>
+    <div class="flex gap-3 pt-2">
+      <button onclick="closeResetModal()" class="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-xl">ยกเลิก</button>
+      <button onclick="executeDataReset()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl">ล้างข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'naymos_gameshop_store_v2';
+const DRAFT_KEY = 'naymos_gameshop_draft_form';
+
+const defaultState = {
+  pointsTarget: 10,
+  minAmountForPoint: 100,
+  referralDiscountAmount: 10,
+  games: [
+    {id:'g-mlbb',name:'Mobile Legends',cover:'',icon:'💎',currency:'Diamond',cashbackRate:12.5,status:'เปิดใช้งาน',notes:'เติมตรง ID'},
+    {id:'g-ro',name:'Ragnarok Origin',cover:'',icon:'🪙',currency:'Nyan Berry',cashbackRate:10,status:'เปิดใช้งาน',notes:''},
+    {id:'g-valorant',name:'VALORANT',cover:'',icon:'🔫',currency:'VP',cashbackRate:8,status:'เปิดใช้งาน',notes:''}
+  ],
+  packages: {
+    'g-mlbb': [
+      {id:'p-ml1',name:'86 Diamonds',amount:86,unit:'Diamond',customerPrice:50,appPrice:42,status:'เปิดขาย'},
+      {id:'p-ml2',name:'172 Diamonds',amount:172,unit:'Diamond',customerPrice:100,appPrice:84,status:'เปิดขาย'},
+      {id:'p-ml3',name:'706 Diamonds',amount:706,unit:'Diamond',customerPrice:400,appPrice:335,status:'เปิดขาย'},
+      {id:'p-ml4',name:'Weekly Pass',amount:1,unit:'Pass',customerPrice:65,appPrice:54,status:'เปิดขาย'}
+    ],
+    'g-ro': [
+      {id:'p-ro1',name:'100 Nyan Berries',amount:100,unit:'Berry',customerPrice:89,appPrice:78,status:'เปิดขาย'},
+      {id:'p-ro2',name:'500 Nyan Berries',amount:500,unit:'Berry',customerPrice:440,appPrice:380,status:'เปิดขาย'}
+    ],
+    'g-valorant': [
+      {id:'p-val1',name:'475 VP',amount:475,unit:'VP',customerPrice:150,appPrice:135,status:'เปิดขาย'},
+      {id:'p-val2',name:'1000 VP',amount:1000,unit:'VP',customerPrice:300,appPrice:265,status:'เปิดขาย'}
+    ]
+  },
+  rankSettings:{silver:1000,gold:5000,platinum:15000,master:50000},
+  members: [
+    {id:'m-101',name:'NayMos Pro Gamer',contact:'089-999-8888',points:7,notes:'VIP',discountWallet:0,referredBy:null,uids:[],rank:'auto',joinedAt:'2026-01-01'},
+    {id:'m-102',name:'Somchai MLBB',contact:'Line: somchai',points:3,notes:'',discountWallet:0,referredBy:null,uids:[],rank:'auto',joinedAt:'2026-03-15'}
+  ],
+  transactions: [
+    {id:'TX-1001',date:'2026-09-01',time:'14:30',type:'TX',gameId:'g-mlbb',gameName:'Mobile Legends',packageId:'p-ml3',item:'706 Diamonds',customerPrice:400,appPrice:335,cashbackRate:12.5,cashbackAmount:41.875,netCost:293.125,profit:106.875,memberId:'m-101',memberName:'NayMos Pro Gamer',notes:''},
+    {id:'TX-1002',date:'2026-09-03',time:'18:15',type:'TX',gameId:'g-valorant',gameName:'VALORANT',packageId:'p-val2',item:'1000 VP',customerPrice:300,appPrice:265,cashbackRate:8,cashbackAmount:21.2,netCost:243.8,profit:56.2,memberId:'m-102',memberName:'Somchai MLBB',notes:''}
+  ],
+  expenses: [
+    {id:'EXP-501',date:'2026-09-02',time:'10:00',type:'EXP',title:'ค่าเน็ต',amount:590,notes:'AIS'}
+  ],
+  pointsHistory: [],
+  slips: [],
+  invoices: []
+};
+
+let appData = JSON.parse(JSON.stringify(defaultState));
+let selectedGameForPackages = null;
+let pendingDeleteAction = null;
+
+// ========== UTILS ==========
+function formatMoney(n){return (n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function profitClass(v){if(v>0)return'profit-pos';if(v<0)return'profit-neg';return'profit-zero'}
+function profitText(v){const s=v>0?'+':'';return s+'฿'+formatMoney(v)}
+function getTodayStr(){return new Date().toISOString().slice(0,10)}
+function getYesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)}
+function thaiDate(str){if(!str)return'-';const[y,m,d]=str.split('-');const mo=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return parseInt(d)+' '+mo[parseInt(m)]+' '+y}
+
+// ========== STORAGE ==========
+function loadState(){
+  try{
+    const s=localStorage.getItem(STORAGE_KEY);
+    if(s){
+      appData=JSON.parse(s);
+      if(!appData.packages)appData.packages={};
+      if(!appData.members)appData.members=[];
+      if(!appData.transactions)appData.transactions=[];
+      if(!appData.expenses)appData.expenses=[];
+      if(!appData.games)appData.games=defaultState.games;
+      if(!appData.pointsHistory)appData.pointsHistory=[];
+      if(!appData.pointsTarget)appData.pointsTarget=10;
+      if(appData.minAmountForPoint===undefined||appData.minAmountForPoint===null)appData.minAmountForPoint=100;
+      if(appData.referralDiscountAmount===undefined||appData.referralDiscountAmount===null)appData.referralDiscountAmount=10;
+      (appData.members||[]).forEach(m=>{if(m.discountWallet===undefined)m.discountWallet=0;if(m.referredBy===undefined)m.referredBy=null;if(!Array.isArray(m.uids))m.uids=[];if(!m.rank)m.rank='auto';if(!m.joinedAt)m.joinedAt=(new Date()).toISOString().slice(0,10);});
+      if(!Array.isArray(appData.slips))appData.slips=[];
+      if(!Array.isArray(appData.invoices))appData.invoices=[];
+      if(!appData.rankSettings)appData.rankSettings={silver:1000,gold:5000,platinum:15000,master:50000};
+    }else saveState();
+  }catch(e){console.error(e)}
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(appData));
+    document.getElementById('sync-status').innerText='● Auto-Save';
+    document.getElementById('sync-status').className='text-[10px] text-emerald-400 ml-1';
+  }catch(e){
+    document.getElementById('sync-status').innerText='● Save Failed';
+    document.getElementById('sync-status').className='text-[10px] text-red-400 ml-1';
+  }
+}
+
+// ========== TOAST / CONFIRM ==========
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-message').innerText=msg;
+  t.classList.remove('hidden');
+  setTimeout(()=>t.classList.add('hidden'),2800);
+}
+function openConfirmModal(title,msg,onYes){
+  document.getElementById('confirm-title').innerText=title;
+  document.getElementById('confirm-message').innerText=msg;
+  pendingDeleteAction=onYes;
+  document.getElementById('confirm-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeConfirmModal(){document.getElementById('confirm-modal').classList.add('hidden');pendingDeleteAction=null}
+document.getElementById('confirm-yes-btn').onclick=function(){if(typeof pendingDeleteAction==='function')pendingDeleteAction();closeConfirmModal()};
+
+// ========== YEARS ==========
+function populateYears(){
+  const cy=new Date().getFullYear();
+  ['dash-year','monthly-year'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    sel.innerHTML='';
+    for(let y=cy-5;y<=cy+20;y++){
+      const o=document.createElement('option');o.value=y;o.textContent=y;
+      if(y===cy)o.selected=true;
+      sel.appendChild(o);
+    }
+  });
+}
+
+// ========== TABS ==========
+function switchTab(id){
+  const tabs=['dashboard','add-entry','daily','manage-games','members','history','invoices','slips','games','monthly'];
+  tabs.forEach(t=>{
+    const b=document.getElementById('tab-'+t),v=document.getElementById('view-'+t);
+    if(t===id){if(b)b.classList.add('active');if(v)v.classList.remove('hidden')}
+    else{if(b)b.classList.remove('active');if(v)v.classList.add('hidden')}
+  });
+  if(id==='dashboard')renderDashboard();
+  if(id==='daily')renderDailySummary();
+  if(id==='manage-games'){renderGameManagementList();closePackagePanel()}
+  if(id==='members')renderMembersList();
+  if(id==='history')renderHistoryTable();
+  if(id==='invoices')renderInvoicesList();
+  if(id==='slips')renderSlipsList();
+  if(id==='games')renderGamesTable();
+  if(id==='monthly')renderMonthlySummary();
+  updateInvoiceBadge();
+  lucide.createIcons();
+}
+
+// ========== DASHBOARD ==========
+function renderDashboard(){
+  const today=getTodayStr(),yesterday=getYesterdayStr();
+  document.getElementById('today-date-label').innerText=thaiDate(today);
+  document.getElementById('yesterday-date-label').innerText=thaiDate(yesterday);
+
+  const todayTx=appData.transactions.filter(t=>t.date===today);
+  const tSales=todayTx.reduce((s,t)=>s+(t.customerPrice||0),0);
+  const tProfit=todayTx.reduce((s,t)=>s+(t.profit||0),0);
+  document.getElementById('dash-today-sales').innerText='฿'+formatMoney(tSales);
+  const tp=document.getElementById('dash-today-profit');tp.innerText=profitText(tProfit);tp.className='text-xl font-bold mt-1 '+profitClass(tProfit);
+  document.getElementById('dash-today-orders').innerText=todayTx.length;
+
+  const gToday={};todayTx.forEach(t=>{if(!gToday[t.gameName])gToday[t.gameName]=0;gToday[t.gameName]+=(t.customerPrice||0)});
+  let topG='-',maxS=0;Object.keys(gToday).forEach(g=>{if(gToday[g]>maxS){maxS=gToday[g];topG=g}});
+  document.getElementById('dash-today-topgame').innerText=topG==='-'?'-':topG+' (฿'+formatMoney(maxS)+')';
+
+  const yestTx=appData.transactions.filter(t=>t.date===yesterday);
+  const ySales=yestTx.reduce((s,t)=>s+(t.customerPrice||0),0);
+  const yProfit=yestTx.reduce((s,t)=>s+(t.profit||0),0);
+  document.getElementById('dash-yest-sales').innerText='฿'+formatMoney(ySales);
+  const yp=document.getElementById('dash-yest-profit');yp.innerText=profitText(yProfit);yp.className='text-xl font-bold mt-1 '+profitClass(yProfit);
+  document.getElementById('dash-yest-orders').innerText=yestTx.length;
+
+  const sm=document.getElementById('dash-month').value,sy=document.getElementById('dash-year').value;
+  const fTx=appData.transactions.filter(t=>{const[y,m]=t.date.split('-');return(sm==='ALL'||parseInt(m)===parseInt(sm))&&y===sy});
+  const fExp=appData.expenses.filter(e=>{const[y,m]=e.date.split('-');return(sm==='ALL'||parseInt(m)===parseInt(sm))&&y===sy});
+
+  let totalSales=0,totalApp=0,totalCb=0,totalNet=0,gross=0;
+  const gStats={};
+  fTx.forEach(t=>{
+    totalSales+=(t.customerPrice||0);totalApp+=(t.appPrice||0);totalCb+=(t.cashbackAmount||0);totalNet+=(t.netCost||0);gross+=(t.profit||0);
+    if(!gStats[t.gameName])gStats[t.gameName]={count:0,sales:0,profit:0};
+    gStats[t.gameName].count++;gStats[t.gameName].sales+=(t.customerPrice||0);gStats[t.gameName].profit+=(t.profit||0);
+  });
+  const totalExp=fExp.reduce((s,e)=>s+(e.amount||0),0);
+  const netP=gross-totalExp;
+
+  document.getElementById('dash-total-sales').innerText='฿'+formatMoney(totalSales);
+  document.getElementById('dash-app-cost').innerText='฿'+formatMoney(totalApp);
+  document.getElementById('dash-cashback').innerText='฿'+formatMoney(totalCb);
+  document.getElementById('dash-net-cost').innerText='฿'+formatMoney(totalNet);
+  const gp=document.getElementById('dash-gross-profit');gp.innerText='฿'+formatMoney(gross);gp.className='text-lg font-bold mt-1 '+profitClass(gross);
+  document.getElementById('dash-expenses').innerText='฿'+formatMoney(totalExp);
+  const np=document.getElementById('dash-net-profit');np.innerText='฿'+formatMoney(netP);np.className='text-xl font-black mt-1 '+profitClass(netP);
+
+  let topGame='-',topGP=0,topCnt=0;
+  Object.keys(gStats).forEach(g=>{if(gStats[g].profit>topGP){topGP=gStats[g].profit;topGame=g;topCnt=gStats[g].count}});
+  document.getElementById('dash-top-game-name').innerText=topGame;
+  const tgp=document.getElementById('dash-top-game-profit');tgp.innerText='กำไร ฿'+formatMoney(topGP);tgp.className='text-lg font-semibold '+profitClass(topGP);
+  document.getElementById('dash-total-tx').innerText=topCnt+' รายการ';
+  document.getElementById('dash-profit-margin').innerText=totalSales>0?((gross/totalSales)*100).toFixed(1)+'%':'0%';
+
+  const mStats={};
+  fTx.forEach(t=>{if(t.memberId){if(!mStats[t.memberId])mStats[t.memberId]={name:t.memberName,spent:0,cnt:0,profit:0};mStats[t.memberId].spent+=(t.customerPrice||0);mStats[t.memberId].cnt++;mStats[t.memberId].profit+=(t.profit||0)}});
+  let tmN='-',tmS=0,tmC=0,tmP=0;
+  Object.keys(mStats).forEach(id=>{if(mStats[id].spent>tmS){tmS=mStats[id].spent;tmN=mStats[id].name;tmC=mStats[id].cnt;tmP=mStats[id].profit}});
+  document.getElementById('dash-top-member-name').innerText=tmN;
+  document.getElementById('dash-top-member-spend').innerText='ยอด ฿'+formatMoney(tmS);
+  document.getElementById('dash-top-member-count').innerText=tmC+' รายการ';
+  document.getElementById('dash-top-member-profit').innerText='฿'+formatMoney(tmP);
+
+  const body=document.getElementById('dash-game-breakdown-body');body.innerHTML='';
+  const keys=Object.keys(gStats);
+  if(!keys.length)body.innerHTML='<tr><td colspan="4" class="py-4 text-center text-zinc-500">ไม่มีข้อมูล</td></tr>';
+  else keys.forEach(g=>{const st=gStats[g];body.innerHTML+=`<tr class="hover:bg-zinc-800/40"><td class="py-2 px-2 font-medium text-white">${g}</td><td class="py-2 px-2 text-center">${st.count}</td><td class="py-2 px-2 text-right text-emerald-400">฿${formatMoney(st.sales)}</td><td class="py-2 px-2 text-right font-bold ${profitClass(st.profit)}">฿${formatMoney(st.profit)}</td></tr>`});
+}
+
+// ========== DAILY ==========
+function renderDailySummary(){
+  const filter=document.getElementById('daily-filter').value;
+  const customEl=document.getElementById('daily-custom-date');
+  if(filter==='custom')customEl.classList.remove('hidden');else customEl.classList.add('hidden');
+  const list=document.getElementById('daily-summary-list');list.innerHTML='';
+  const dateMap={};
+  appData.transactions.forEach(t=>{if(!dateMap[t.date])dateMap[t.date]={sales:0,profit:0,orders:0};dateMap[t.date].sales+=(t.customerPrice||0);dateMap[t.date].profit+=(t.profit||0);dateMap[t.date].orders++});
+  let dates=Object.keys(dateMap).sort().reverse();
+  const today=getTodayStr(),now=new Date();
+  if(filter==='7')dates=dates.slice(0,7);
+  else if(filter==='14')dates=dates.slice(0,14);
+  else if(filter==='30')dates=dates.slice(0,30);
+  else if(filter==='this-month')dates=dates.filter(d=>d.startsWith(today.slice(0,7)));
+  else if(filter==='last-month'){const d=new Date(now.getFullYear(),now.getMonth()-1,1);dates=dates.filter(x=>x.startsWith(d.toISOString().slice(0,7)))}
+  else if(filter==='custom'){const cd=customEl.value;dates=cd?dates.filter(d=>d===cd):[]}
+  if(!dates.length){list.innerHTML='<div class="bg-brand-card p-8 rounded-2xl border border-brand-border text-center text-zinc-500">ไม่พบข้อมูล</div>';return}
+  dates.forEach(date=>{
+    const st=dateMap[date];
+    list.innerHTML+=`<div class="bg-brand-card p-5 rounded-2xl border border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center"><i data-lucide="calendar" class="w-6 h-6"></i></div>
+        <div><h3 class="text-lg font-bold text-white">${thaiDate(date)}</h3><p class="text-xs text-zinc-400">${date}</p></div>
+      </div>
+      <div class="grid grid-cols-3 gap-6 text-center sm:text-right">
+        <div><p class="text-xs text-zinc-400">ยอดขาย</p><p class="text-base font-bold text-white">฿${formatMoney(st.sales)}</p></div>
+        <div><p class="text-xs text-zinc-400">กำไร</p><p class="text-base font-bold ${profitClass(st.profit)}">${profitText(st.profit)}</p></div>
+        <div><p class="text-xs text-zinc-400">ออเดอร์</p><p class="text-base font-bold text-white">${st.orders}</p></div>
+      </div>
+    </div>`;
+  });
+  lucide.createIcons();
+}
+
+// ========== FORM ==========
+function setFormDefaultDateTime(){
+  const n=new Date();
+  document.getElementById('form-date').value=n.toISOString().slice(0,10);
+  document.getElementById('form-time').value=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+function populateGameDropdowns(){
+  const sel=document.getElementById('form-game');
+  sel.innerHTML='<option value="">-- เลือกเกม --</option>';
+  appData.games.forEach(g=>{sel.innerHTML+=`<option value="${g.id}">${g.icon||'🎮'} ${g.name} (${g.cashbackRate}%)</option>`});
+}
+function populateMemberDropdowns(){
+  const fm=document.getElementById('form-member-select');
+  const am=document.getElementById('adj-member-select');
+  fm.innerHTML='<option value="">-- ไม่ระบุ --</option>';
+  am.innerHTML='';
+  appData.members.forEach(m=>{
+    fm.innerHTML+=`<option value="${m.id}">${m.name} (${m.points} คะแนน)</option>`;
+    am.innerHTML+=`<option value="${m.id}">${m.name} (ปัจจุบัน ${m.points})</option>`;
+  });
+}
+function onFormGameChange(){
+  const gid=document.getElementById('form-game').value;
+  const ps=document.getElementById('form-package-select');
+  if(!gid){ps.disabled=true;ps.innerHTML='<option value="">-- เลือกเกมก่อน --</option>';updateFormCalculations();return}
+  const game=appData.games.find(g=>g.id===gid);
+  const pkgs=appData.packages[gid]||[];
+  ps.disabled=false;
+  ps.innerHTML='<option value="">-- เลือกแพ็ก (หรือใส่ราคาเอง) --</option>';
+  pkgs.filter(p=>p.status==='เปิดขาย').forEach(p=>{ps.innerHTML+=`<option value="${p.id}">${p.name} - ฿${p.customerPrice}</option>`});
+  document.getElementById('preview-cashback-rate').innerText=(game?game.cashbackRate:0)+'%';
+  updateFormCalculations();
+  loadMemberSavedUids();
+}
+function onFormPackageChange(){
+  const gid=document.getElementById('form-game').value;
+  const pid=document.getElementById('form-package-select').value;
+  if(!gid||!pid)return;
+  const pkg=(appData.packages[gid]||[]).find(p=>p.id===pid);
+  if(pkg){
+    document.getElementById('form-item').value=pkg.name;
+    document.getElementById('form-customer-price').value=pkg.customerPrice;
+    document.getElementById('form-app-price').value=pkg.appPrice;
+    const curEl=document.getElementById('form-currency-amount');
+    if(curEl) curEl.value=(pkg.amount?pkg.amount+' ':'')+(pkg.unit||'')||pkg.name;
+    updateFormCalculations();
+  }
+}
+function updateFormCalculations(){
+  const gid=document.getElementById('form-game').value;
+  const cp=parseFloat(document.getElementById('form-customer-price').value)||0;
+  const ap=parseFloat(document.getElementById('form-app-price').value)||0;
+  const game=appData.games.find(g=>g.id===gid);
+  const rate=game?game.cashbackRate:0;
+  const cb=ap*(rate/100);
+  const net=ap-cb;
+  const profit=cp-net;
+  const margin=cp>0?((profit/cp)*100).toFixed(1):'0';
+  document.getElementById('preview-cashback-rate').innerText=rate+'%';
+  document.getElementById('preview-cashback-amount').innerText='฿'+cb.toFixed(2);
+  document.getElementById('preview-net-cost').innerText='฿'+net.toFixed(2);
+  const pe=document.getElementById('preview-profit');pe.innerText=profitText(profit);pe.className='text-lg block font-bold '+profitClass(profit);
+  document.getElementById('preview-profit-margin').innerText=margin+'% Margin';
+  updatePointPreview();
+  updateDiscountOption();
+}
+function updatePointPreview(){
+  const hint=document.getElementById('point-preview-hint');
+  if(!hint)return;
+  const mid=document.getElementById('form-member-select').value;
+  const cp=parseFloat(document.getElementById('form-customer-price').value)||0;
+  const minAmt=appData.minAmountForPoint||0;
+  if(!mid){
+    hint.classList.add('hidden');
+    return;
+  }
+  hint.classList.remove('hidden');
+  if(cp>=minAmt){
+    hint.innerText='✅ ยอดนี้ถึงเกณฑ์ (฿'+formatMoney(minAmt)+') จะได้ +1 คะแนน';
+    hint.className='text-[11px] mt-1.5 text-emerald-400';
+  }else{
+    hint.innerText='⚠️ ยอดยังไม่ถึงเกณฑ์ ฿'+formatMoney(minAmt)+' (ปัจจุบัน ฿'+formatMoney(cp)+') — ไม่ได้คะแนน แต่ยังนับยอดขายปกติ';
+    hint.className='text-[11px] mt-1.5 text-amber-400';
+  }
+}
+function updateMinAmountForPoint(){
+  const val=parseFloat(document.getElementById('setting-min-amount-point').value);
+  appData.minAmountForPoint=(isNaN(val)||val<0)?0:val;
+  saveState();
+  updatePointPreview();
+  showToast('ตั้งยอดขั้นต่ำได้คะแนนเป็น ฿'+formatMoney(appData.minAmountForPoint));
+}
+function updateDiscountOption(){
+  const box=document.getElementById('discount-use-box');
+  const row=document.getElementById('discount-amount-row');
+  const mid=document.getElementById('form-member-select').value;
+  const cp=parseFloat(document.getElementById('form-customer-price').value)||0;
+  if(!box)return;
+  if(!mid){box.classList.add('hidden');return}
+  const m=appData.members.find(x=>x.id===mid);
+  const wallet=(m&&m.discountWallet)?m.discountWallet:0;
+  if(wallet<=0){box.classList.add('hidden');return}
+  box.classList.remove('hidden');
+  document.getElementById('form-wallet-balance').innerText='฿'+formatMoney(wallet);
+  const use=document.getElementById('form-use-discount').checked;
+  if(use){
+    row.classList.remove('hidden');
+    let amt=parseFloat(document.getElementById('form-discount-amount').value);
+    if(isNaN(amt)||amt<0) amt=Math.min(wallet,cp);
+    if(amt>wallet) amt=wallet;
+    if(amt>cp) amt=cp;
+    document.getElementById('form-discount-amount').value=amt;
+    document.getElementById('form-pay-after-discount').innerText='฿'+formatMoney(Math.max(0,cp-amt));
+  }else{
+    row.classList.add('hidden');
+  }
+}
+function saveDraftForm(){
+  const d={date:document.getElementById('form-date').value,time:document.getElementById('form-time').value,gameId:document.getElementById('form-game').value,packageId:document.getElementById('form-package-select').value,item:document.getElementById('form-item').value,customerPrice:document.getElementById('form-customer-price').value,appPrice:document.getElementById('form-app-price').value,notes:document.getElementById('form-notes').value};
+  localStorage.setItem(DRAFT_KEY,JSON.stringify(d));
+  document.getElementById('draft-indicator').classList.remove('hidden');
+}
+function loadDraftForm(){
+  try{
+    const d=localStorage.getItem(DRAFT_KEY);if(!d)return;
+    const data=JSON.parse(d);
+    if(data.gameId){document.getElementById('form-game').value=data.gameId;onFormGameChange();if(data.packageId)document.getElementById('form-package-select').value=data.packageId}
+    if(data.item)document.getElementById('form-item').value=data.item;
+    if(data.customerPrice)document.getElementById('form-customer-price').value=data.customerPrice;
+    if(data.appPrice)document.getElementById('form-app-price').value=data.appPrice;
+    if(data.notes)document.getElementById('form-notes').value=data.notes;
+    updateFormCalculations();
+    document.getElementById('draft-indicator').classList.remove('hidden');
+  }catch(e){}
+}
+let currentInvoiceId=null;
+function handleSaveTransaction(e){
+  e.preventDefault();
+  const gid=document.getElementById('form-game').value;
+  const game=appData.games.find(g=>g.id===gid);
+  if(!game){alert('เลือกเกมก่อน');return}
+  let fullPrice=parseFloat(document.getElementById('form-customer-price').value)||0;
+  const ap=parseFloat(document.getElementById('form-app-price').value)||0;
+  const rate=game.cashbackRate||0;
+  const mid=document.getElementById('form-member-select').value;
+  let mname='-';
+  let discountUsed=0;
+  let useDiscFlag=false;
+  if(mid){
+    const m=appData.members.find(x=>x.id===mid);
+    if(m){
+      mname=m.name;
+      useDiscFlag=document.getElementById('form-use-discount')&&document.getElementById('form-use-discount').checked;
+      if(useDiscFlag){
+        let amt=parseFloat(document.getElementById('form-discount-amount').value)||0;
+        const wallet=m.discountWallet||0;
+        if(amt>wallet) amt=wallet;
+        if(amt>fullPrice) amt=fullPrice;
+        if(amt>0) discountUsed=amt;
+      }
+    }
+  }
+  const payAmount=Math.max(0,fullPrice-discountUsed);
+  const uidVal=document.getElementById('form-uid')?document.getElementById('form-uid').value:'';
+  const curAmt=document.getElementById('form-currency-amount')?document.getElementById('form-currency-amount').value:'';
+  const itemName=document.getElementById('form-item').value;
+  const invId='INV-'+Date.now().toString().slice(-6);
+  const invDate=document.getElementById('form-date').value;
+  const invTime=document.getElementById('form-time').value;
+  if(!Array.isArray(appData.invoices)) appData.invoices=[];
+  const inv={
+    id:invId,
+    status:'pending',
+    date:invDate,
+    time:invTime,
+    gameId:game.id,
+    gameName:game.name,
+    packageId:document.getElementById('form-package-select').value||'custom',
+    item:itemName,
+    fullPrice:fullPrice,
+    discountUsed:discountUsed,
+    useDiscount:useDiscFlag,
+    customerPrice:payAmount,
+    appPrice:ap,
+    cashbackRate:rate,
+    memberId:mid||null,
+    memberName:mname,
+    notes:document.getElementById('form-notes').value,
+    uid:uidVal,
+    currencyAmount:curAmt||itemName,
+    saveUid:!!(document.getElementById('form-save-uid')&&document.getElementById('form-save-uid').checked)
+  };
+  appData.invoices.unshift(inv);
+  saveState();
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draft-indicator').classList.add('hidden');
+  document.getElementById('add-transaction-form').reset();
+  setFormDefaultDateTime();
+  document.getElementById('form-package-select').disabled=true;
+  document.getElementById('form-package-select').innerHTML='<option value="">-- เลือกเกมก่อน --</option>';
+  populateMemberDropdowns();
+  updateFormCalculations();
+  updatePointPreview();
+  updateInvoiceBadge();
+  showToast('สร้างใบแจ้งยอดแล้ว (รอชำระ)');
+  showInvoice(inv);
+}
+
+function showSlip(tx, game){
+  document.getElementById('slip-id').innerText=tx.id;
+  document.getElementById('slip-datetime').innerText=thaiDate(tx.date)+' '+tx.time;
+  document.getElementById('slip-member').innerText=(tx.memberName&&tx.memberName!=='-')?tx.memberName:'Unknown';
+  document.getElementById('slip-game').innerText=tx.gameName||'-';
+  document.getElementById('slip-package').innerText=tx.item||'-';
+  document.getElementById('slip-uid').innerText=tx.uid||'-';
+  document.getElementById('slip-currency').innerText=tx.currencyAmount||tx.item||'-';
+  const fullP=tx.fullPrice!=null?tx.fullPrice:tx.customerPrice;
+  const disc=tx.discountUsed||0;
+  document.getElementById('slip-full-price').innerText='฿'+formatMoney(fullP);
+  document.getElementById('slip-discount').innerText=disc>0?('-฿'+formatMoney(disc)):'฿0.00';
+  document.getElementById('slip-pay').innerText='฿'+formatMoney(tx.customerPrice);
+  const bonusRow=document.getElementById('slip-bonus-row');
+  const bonusEl=document.getElementById('slip-bonus');
+  let bonusTxt=[];
+  if(tx.gotPoint) bonusTxt.push('⭐ สะสมคะแนน +1 (ยอดถึงเกณฑ์)');
+  if(disc>0) bonusTxt.push('💸 ใช้ส่วนลดจากกระเป๋า ฿'+formatMoney(disc));
+  if(bonusTxt.length){
+    bonusRow.classList.remove('hidden');
+    bonusEl.innerText=bonusTxt.join(' | ');
+  }else{
+    bonusRow.classList.add('hidden');
+  }
+  const prev0=document.getElementById('slip-image-preview');
+  if(prev0) prev0.classList.add('hidden');
+  document.getElementById('slip-modal').classList.remove('hidden');
+}
+function closeSlipModal(){
+  document.getElementById('slip-modal').classList.add('hidden');
+  const prev=document.getElementById('slip-image-preview');
+  if(prev) prev.classList.add('hidden');
+}
+async function saveSlipAsImage(){
+  const el=document.getElementById('slip-content');
+  const btn=document.getElementById('btn-save-slip');
+  if(!el){alert('ไม่พบสลิป');return}
+  if(typeof html2canvas!=='function'){alert('ระบบสร้างรูปยังไม่พร้อม รอสักครู่แล้วลองใหม่');return}
+  try{
+    if(btn){btn.disabled=true;btn.innerText='กำลังสร้างรูป...'}
+    const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,allowTaint:true});
+    const dataUrl=canvas.toDataURL('image/png');
+    const id=(document.getElementById('slip-id')||{}).innerText||Date.now();
+    const fileName='NayMos_Slip_'+id+'.png';
+
+    // แสดงรูปบนจอ ให้กดค้างบันทึกได้ (สำคัญสำหรับ iPad/iPhone)
+    const prev=document.getElementById('slip-image-preview');
+    const img=document.getElementById('slip-preview-img');
+    const a=document.getElementById('slip-download-link');
+    if(prev&&img){
+      img.src=dataUrl;
+      prev.classList.remove('hidden');
+      prev.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    if(a){
+      a.href=dataUrl;
+      a.download=fileName;
+    }
+
+    // พยายามดาวน์โหลด (คอมฯ / Android บางเครื่อง)
+    try{
+      const link=document.createElement('a');
+      link.download=fileName;
+      link.href=dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }catch(e){}
+
+    showToast('สร้างรูปแล้ว — กดค้างที่รูปด้านล่างเพื่อบันทึกลงเครื่อง');
+  }catch(err){
+    console.error(err);
+    alert('สร้างรูปไม่สำเร็จ: '+(err.message||err));
+  }finally{
+    if(btn){btn.disabled=false;btn.innerText='📷 บันทึกรูปสลิป'}
+  }
+}
+
+// ========== INVOICES ==========
+function updateInvoiceBadge(){
+  const n=(appData.invoices||[]).filter(i=>i.status==='pending').length;
+  const badge=document.getElementById('invoice-badge');
+  const hint=document.getElementById('invoice-pending-hint');
+  const alertB=document.getElementById('invoice-alert-banner');
+  const alertT=document.getElementById('invoice-alert-text');
+  if(badge){
+    if(n>0){badge.classList.remove('hidden');badge.innerText=n;}
+    else badge.classList.add('hidden');
+  }
+  if(hint) hint.innerText='ค้างชำระ '+n+' รายการ';
+  if(alertB&&alertT){
+    if(n>0){alertB.classList.remove('hidden');alertT.innerText='มีใบแจ้งยอดค้างชำระ '+n+' รายการ — กดยืนยันเมื่อลูกค้าโอนแล้ว';}
+    else alertB.classList.add('hidden');
+  }
+}
+function renderInvoicesList(){
+  updateInvoiceBadge();
+  const body=document.getElementById('invoices-table-body');
+  if(!body)return;
+  const filter=document.getElementById('invoice-filter')?.value||'pending';
+  const q=(document.getElementById('invoice-search')?.value||'').toLowerCase();
+  body.innerHTML='';
+  let list=(appData.invoices||[]).filter(i=>{
+    if(filter!=='all' && i.status!==filter) return false;
+    if(!q) return true;
+    return [i.id,i.memberName,i.gameName,i.item,i.uid].join(' ').toLowerCase().includes(q);
+  });
+  if(!list.length){body.innerHTML='<tr><td colspan="8" class="p-6 text-center text-zinc-500">ไม่มีรายการ</td></tr>';return}
+  list.forEach(inv=>{
+    const st=inv.status==='pending'?'<span class="text-amber-400 font-semibold">รอชำระ</span>':inv.status==='paid'?'<span class="text-emerald-400">ชำระแล้ว</span>':'<span class="text-zinc-500">ยกเลิก</span>';
+    let actions='';
+    if(inv.status==='pending'){
+      actions=`<button onclick="showInvoiceById('${inv.id}')" class="px-2 py-1 bg-blue-600/80 text-white rounded-lg text-[11px] mr-1">เปิด</button>
+        <button onclick="confirmInvoicePaid('${inv.id}')" class="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[11px] mr-1">ชำระแล้ว</button>
+        <button onclick="cancelInvoice('${inv.id}')" class="px-2 py-1 bg-zinc-700 text-zinc-300 rounded-lg text-[11px]">ยกเลิก</button>`;
+    }else{
+      actions=`<button onclick="showInvoiceById('${inv.id}')" class="px-2 py-1 bg-zinc-700 text-zinc-200 rounded-lg text-[11px]">ดู</button>`;
+    }
+    body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+      <td class="p-3 font-mono text-xs">${inv.id}</td>
+      <td class="p-3">${thaiDate(inv.date)} ${inv.time||''}</td>
+      <td class="p-3">${(inv.memberName&&inv.memberName!=='-')?inv.memberName:'Unknown'}</td>
+      <td class="p-3"><div class="text-white font-medium">${inv.gameName||'-'}</div><div class="text-[10px] text-zinc-400">${inv.item||''}</div></td>
+      <td class="p-3 font-mono text-xs">${inv.uid||'-'}</td>
+      <td class="p-3 text-right text-amber-300 font-semibold">฿${formatMoney(inv.customerPrice)}</td>
+      <td class="p-3 text-center">${st}</td>
+      <td class="p-3 text-center whitespace-nowrap">${actions}</td>
+    </tr>`;
+  });
+}
+function showInvoiceById(id){
+  const inv=(appData.invoices||[]).find(x=>x.id===id);
+  if(inv) showInvoice(inv);
+}
+function showInvoice(inv){
+  currentInvoiceId=inv.id;
+  // copy logo from slip if available
+  const slipLogo=document.querySelector('#slip-content img');
+  const invLogo=document.getElementById('invoice-logo-img');
+  if(slipLogo&&invLogo&&slipLogo.src) invLogo.src=slipLogo.src;
+  document.getElementById('inv-id').innerText=inv.id;
+  document.getElementById('inv-datetime').innerText=thaiDate(inv.date)+' '+(inv.time||'');
+  document.getElementById('inv-member').innerText=(inv.memberName&&inv.memberName!=='-')?inv.memberName:'Unknown';
+  document.getElementById('inv-game').innerText=inv.gameName||'-';
+  document.getElementById('inv-package').innerText=inv.item||'-';
+  document.getElementById('inv-uid').innerText=inv.uid||'-';
+  document.getElementById('inv-currency').innerText=inv.currencyAmount||inv.item||'-';
+  document.getElementById('inv-full-price').innerText='฿'+formatMoney(inv.fullPrice);
+  document.getElementById('inv-discount').innerText=(inv.discountUsed>0)?('-฿'+formatMoney(inv.discountUsed)):'฿0.00';
+  document.getElementById('inv-pay').innerText='฿'+formatMoney(inv.customerPrice);
+  const prev=document.getElementById('invoice-image-preview');
+  if(prev) prev.classList.add('hidden');
+  document.getElementById('invoice-modal').classList.remove('hidden');
+}
+function closeInvoiceModal(){document.getElementById('invoice-modal').classList.add('hidden');currentInvoiceId=null;}
+function confirmInvoicePaidFromModal(){if(currentInvoiceId) confirmInvoicePaid(currentInvoiceId);}
+function cancelInvoiceFromModal(){if(currentInvoiceId) cancelInvoice(currentInvoiceId);}
+function cancelInvoice(id){
+  const inv=(appData.invoices||[]).find(x=>x.id===id);
+  if(!inv||inv.status!=='pending')return;
+  openConfirmModal('ยกเลิกใบแจ้งยอด?','เลขที่ '+id+' จะถูกยกเลิก',()=>{
+    inv.status='cancelled';
+    saveState();
+    updateInvoiceBadge();
+    renderInvoicesList();
+    closeInvoiceModal();
+    showToast('ยกเลิกใบแจ้งยอดแล้ว');
+  });
+}
+function confirmInvoicePaid(id){
+  const inv=(appData.invoices||[]).find(x=>x.id===id);
+  if(!inv||inv.status!=='pending'){alert('ไม่พบใบแจ้งยอด หรือชำระแล้ว');return;}
+  const game=appData.games.find(g=>g.id===inv.gameId)||{name:inv.gameName,cashbackRate:inv.cashbackRate||0};
+  let cp=inv.customerPrice;
+  const fullPrice=inv.fullPrice;
+  const ap=inv.appPrice||0;
+  const rate=inv.cashbackRate||game.cashbackRate||0;
+  const mid=inv.memberId;
+  let mname=inv.memberName||'-';
+  let gotPoint=false;
+  let discountUsed=inv.discountUsed||0;
+  const minAmt=appData.minAmountForPoint||0;
+  if(mid){
+    const m=appData.members.find(x=>x.id===mid);
+    if(m){
+      mname=m.name;
+      if(discountUsed>0 && inv.useDiscount){
+        const wallet=m.discountWallet||0;
+        const useAmt=Math.min(discountUsed,wallet,fullPrice);
+        m.discountWallet=Math.max(0,wallet-useAmt);
+        discountUsed=useAmt;
+        cp=Math.max(0,fullPrice-useAmt);
+      }
+      if(fullPrice>=minAmt){
+        m.points=(m.points||0)+1;
+        gotPoint=true;
+        appData.pointsHistory.push({id:'PH-'+Date.now(),memberId:mid,memberName:mname,action:'add',amount:1,reason:'เติมเกม ยอด ฿'+fullPrice+' (ถึงเกณฑ์ ฿'+minAmt+')',date:getTodayStr(),time:new Date().toTimeString().slice(0,5)});
+      }
+      if(inv.saveUid && inv.uid){
+        if(!Array.isArray(m.uids)) m.uids=[];
+        const exists=m.uids.some(u=>(u.uid||'').trim()===inv.uid.trim() && (u.gameId===inv.gameId||!u.gameId));
+        if(!exists) m.uids.push({uid:inv.uid.trim(),gameId:inv.gameId,gameName:inv.gameName,label:inv.gameName+' · '+inv.uid.trim()});
+      }
+    }
+  }
+  const cb=ap*(rate/100);
+  const net=ap-cb;
+  const profit=cp-net;
+  const txId='TX-'+Date.now().toString().slice(-6);
+  const newTx={
+    id:txId,date:inv.date,time:inv.time,type:'TX',
+    gameId:inv.gameId,gameName:inv.gameName,packageId:inv.packageId,item:inv.item,
+    customerPrice:cp,fullPrice:fullPrice,discountUsed:discountUsed,
+    appPrice:ap,cashbackRate:rate,cashbackAmount:cb,netCost:net,profit,
+    memberId:mid||null,memberName:mname,notes:inv.notes||'',
+    gotPoint:gotPoint,uid:inv.uid||'',currencyAmount:inv.currencyAmount||inv.item,
+    invoiceId:inv.id
+  };
+  appData.transactions.unshift(newTx);
+  if(!Array.isArray(appData.slips)) appData.slips=[];
+  appData.slips.unshift({
+    id:txId,date:inv.date,time:inv.time,memberId:mid||null,
+    memberName:(mname&&mname!=='-')?mname:'Unknown',
+    gameId:inv.gameId,gameName:inv.gameName,item:inv.item,
+    uid:inv.uid||'-',currencyAmount:inv.currencyAmount||inv.item,
+    fullPrice:fullPrice,discountUsed:discountUsed,customerPrice:cp,gotPoint:gotPoint
+  });
+  inv.status='paid';
+  inv.txId=txId;
+  saveState();
+  updateInvoiceBadge();
+  renderInvoicesList();
+  closeInvoiceModal();
+  showToast(gotPoint?'ชำระแล้ว + ออกสลิป (+1 คะแนน)':'ชำระแล้ว + ออกสลิป');
+  showSlip(newTx, game);
+}
+async function saveInvoiceAsImage(){
+  const el=document.getElementById('invoice-content');
+  const btn=document.getElementById('btn-save-invoice');
+  if(!el||typeof html2canvas!=='function'){alert('ระบบสร้างรูปยังไม่พร้อม');return}
+  try{
+    if(btn){btn.disabled=true;btn.innerText='กำลังสร้างรูป...'}
+    const canvas=await html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false,allowTaint:true});
+    const dataUrl=canvas.toDataURL('image/png');
+    const prev=document.getElementById('invoice-image-preview');
+    const img=document.getElementById('invoice-preview-img');
+    if(prev&&img){img.src=dataUrl;prev.classList.remove('hidden');prev.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    try{
+      const a=document.createElement('a');
+      a.download='NayMos_Invoice_'+(currentInvoiceId||Date.now())+'.png';
+      a.href=dataUrl;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }catch(e){}
+    showToast('สร้างรูปแล้ว — กดค้างที่รูปเพื่อบันทึก');
+  }catch(err){alert('สร้างรูปไม่สำเร็จ');}
+  finally{if(btn){btn.disabled=false;btn.innerText='📷 บันทึกรูปใบแจ้งยอด'}}
+}
+function buildCustomerMessage(type){
+  if(type==='invoice' && currentInvoiceId){
+    const inv=(appData.invoices||[]).find(x=>x.id===currentInvoiceId);
+    if(!inv) return '';
+    return `🎮 NayMos GameShop — ใบแจ้งยอด
+เลขที่: ${inv.id}
+สมาชิก: ${(inv.memberName&&inv.memberName!=='-')?inv.memberName:'Unknown'}
+เกม: ${inv.gameName||'-'}
+แพ็ก: ${inv.item||'-'}
+UID: ${inv.uid||'-'}
+จะได้รับ: ${inv.currencyAmount||inv.item||'-'}
+ยอดที่ต้องชำระ: ฿${formatMoney(inv.customerPrice)}
+${inv.discountUsed?('ส่วนลด: ฿'+formatMoney(inv.discountUsed)+'\n'):''}กรุณาโอนตามยอด แล้วแจ้งสลิปกลับร้านครับ 🙏`;
+  }
+  // slip
+  const id=document.getElementById('slip-id')?.innerText||'';
+  const member=document.getElementById('slip-member')?.innerText||'Unknown';
+  const game=document.getElementById('slip-game')?.innerText||'-';
+  const pkg=document.getElementById('slip-package')?.innerText||'-';
+  const uid=document.getElementById('slip-uid')?.innerText||'-';
+  const cur=document.getElementById('slip-currency')?.innerText||'-';
+  const pay=document.getElementById('slip-pay')?.innerText||'-';
+  return `✅ NayMos GameShop — เติมสำเร็จ
+เลขที่: ${id}
+สมาชิก: ${member}
+เกม: ${game}
+แพ็ก: ${pkg}
+UID: ${uid}
+ได้รับ: ${cur}
+ยอดชำระ: ${pay}
+ขอบคุณที่ใช้บริการครับ 🙏`;
+}
+function copyCustomerMessage(type){
+  const text=buildCustomerMessage(type);
+  if(!text){alert('ไม่มีข้อความ');return}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>showToast('คัดลอกข้อความแล้ว วางในไลน์ได้เลย')).catch(()=>fallbackCopy(text));
+  }else fallbackCopy(text);
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showToast('คัดลอกข้อความแล้ว');}catch(e){alert(text);}
+  document.body.removeChild(ta);
+}
+
+// ========== SLIPS / BACKUP / MEMBER UID ==========
+function renderSlipsList(){
+  const body=document.getElementById('slips-table-body');
+  if(!body)return;
+  const q=(document.getElementById('slip-search')?.value||'').toLowerCase();
+  body.innerHTML='';
+  const list=(appData.slips||[]).filter(s=>{
+    if(!q)return true;
+    return [s.id,s.memberName,s.gameName,s.item,s.uid].join(' ').toLowerCase().includes(q);
+  });
+  if(!list.length){body.innerHTML='<tr><td colspan="7" class="p-6 text-center text-zinc-500">ยังไม่มีสลิป</td></tr>';return}
+  list.forEach(s=>{
+    body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+      <td class="p-3 font-mono text-xs">${s.id}</td>
+      <td class="p-3">${thaiDate(s.date)} ${s.time||''}</td>
+      <td class="p-3">${s.memberName||'Unknown'}</td>
+      <td class="p-3"><div class="font-medium text-white">${s.gameName||'-'}</div><div class="text-[10px] text-zinc-400">${s.item||''}</div></td>
+      <td class="p-3 font-mono text-xs">${s.uid||'-'}</td>
+      <td class="p-3 text-right text-emerald-400 font-semibold">฿${formatMoney(s.customerPrice)}</td>
+      <td class="p-3 text-center"><button onclick="reopenSlip('${s.id}')" class="px-2.5 py-1 bg-red-600/80 hover:bg-red-500 text-white text-[11px] rounded-lg">เปิดสลิป</button></td>
+    </tr>`;
+  });
+}
+function reopenSlip(id){
+  const s=(appData.slips||[]).find(x=>x.id===id);
+  if(!s){alert('ไม่พบสลิป');return}
+  showSlip({
+    id:s.id,date:s.date,time:s.time,
+    memberName:s.memberName,gameName:s.gameName,item:s.item,
+    uid:s.uid,currencyAmount:s.currencyAmount,
+    fullPrice:s.fullPrice,discountUsed:s.discountUsed||0,
+    customerPrice:s.customerPrice,gotPoint:s.gotPoint
+  }, {name:s.gameName});
+}
+function exportFullBackup(){
+  const blob=new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='NayMos_Backup_'+getTodayStr()+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('สำรองข้อมูลแล้ว (ไฟล์ JSON)');
+}
+function importFullBackup(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data||typeof data!=='object') throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
+      if(!confirm('นำเข้าข้อมูลจะแทนที่ข้อมูลปัจจุบันทั้งหมด ต้องการดำเนินการต่อหรือไม่?')){
+        ev.target.value='';
+        return;
+      }
+      appData=data;
+      if(!Array.isArray(appData.slips))appData.slips=[];
+      (appData.members||[]).forEach(m=>{if(!Array.isArray(m.uids))m.uids=[];if(m.discountWallet===undefined)m.discountWallet=0;});
+      saveState();
+      populateMemberDropdowns();
+      renderDashboard();
+      renderHistoryTable();
+      renderMembersList();
+      renderSlipsList();
+      renderDailySummary();
+      showToast('นำเข้าข้อมูลสำเร็จ');
+    }catch(err){
+      alert('นำเข้าไม่สำเร็จ: '+(err.message||err));
+    }
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+}
+function loadMemberSavedUids(){
+  const sel=document.getElementById('form-uid-saved');
+  if(!sel)return;
+  const mid=document.getElementById('form-member-select').value;
+  const gid=document.getElementById('form-game').value;
+  sel.innerHTML='<option value="">-- UID ที่บันทึกไว้ --</option>';
+  if(!mid)return;
+  const m=appData.members.find(x=>x.id===mid);
+  if(!m||!Array.isArray(m.uids))return;
+  m.uids.filter(u=>!gid||!u.gameId||u.gameId===gid).forEach(u=>{
+    sel.innerHTML+=`<option value="${u.uid}">${u.label||u.uid}</option>`;
+  });
+}
+function onSavedUidSelect(){
+  const sel=document.getElementById('form-uid-saved');
+  const input=document.getElementById('form-uid');
+  if(sel&&input&&sel.value) input.value=sel.value;
+}
+
+// ========== GAMES & PACKAGES ==========
+function renderGameManagementList(){
+  const search=(document.getElementById('manage-game-search').value||'').toLowerCase();
+  const grid=document.getElementById('game-management-grid');grid.innerHTML='';
+  const list=appData.games.filter(g=>g.name.toLowerCase().includes(search));
+  if(!list.length){grid.innerHTML='<div class="col-span-full p-8 text-center text-zinc-500 bg-brand-card rounded-2xl border border-brand-border">ไม่พบเกม</div>';return}
+  list.forEach(g=>{
+    const pkgs=appData.packages[g.id]||[];
+    const cover=g.cover||('https://placehold.co/400x200/18181c/ef4444?text='+encodeURIComponent(g.name));
+    grid.innerHTML+=`<div class="bg-brand-card rounded-2xl border border-brand-border overflow-hidden flex flex-col justify-between hover:border-zinc-700 transition">
+      <div>
+        <div class="h-32 bg-zinc-900 relative overflow-hidden">
+          <img src="${cover}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x200/18181c/ef4444?text=Game'">
+          <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
+          <span class="absolute top-3 left-3 bg-zinc-900/80 backdrop-blur text-xs px-2.5 py-1 rounded-lg text-white border border-zinc-700/80">${g.icon||'🎮'} ${g.currency||''}</span>
+          <span class="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg">${g.cashbackRate}% CB</span>
+        </div>
+        <div class="p-4 space-y-1">
+          <div class="flex justify-between items-start">
+            <h3 class="font-bold text-lg text-white">${g.name}</h3>
+            <span class="text-[10px] px-2 py-0.5 rounded ${g.status==='เปิดใช้งาน'?'bg-emerald-950 text-emerald-400 border border-emerald-800':'bg-zinc-800 text-zinc-400'}">${g.status}</span>
+          </div>
+          <p class="text-xs text-zinc-400">${g.notes||''}</p>
+          <p class="text-xs text-zinc-300 font-medium">📦 ${pkgs.length} แพ็กเกจ</p>
+        </div>
+      </div>
+      <div class="p-4 border-t border-zinc-800 flex items-center justify-between gap-2 bg-zinc-900/40">
+        <button onclick="openPackagePanel('${g.id}')" class="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-4 h-4"></i>จัดการแพ็ก
+        </button>
+        <div class="flex gap-1">
+          <button onclick="openEditGameModal('${g.id}')" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+          <button onclick="deleteGame('${g.id}')" class="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/60 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+    </div>`;
+  });
+  lucide.createIcons();
+}
+function openPackagePanel(gid){
+  selectedGameForPackages=gid;
+  const g=appData.games.find(x=>x.id===gid);if(!g)return;
+  document.getElementById('package-management-panel').classList.remove('hidden');
+  document.getElementById('active-game-name').innerText=g.name;
+  document.getElementById('active-game-icon').innerText=g.icon||'🎮';
+  document.getElementById('active-game-currency').innerText=(g.currency||'-')+' ('+(g.icon||'')+')';
+  document.getElementById('active-game-rate').innerText=g.cashbackRate+'%';
+  renderActiveGamePackages();
+  document.getElementById('package-management-panel').scrollIntoView({behavior:'smooth'});
+}
+function closePackagePanel(){document.getElementById('package-management-panel').classList.add('hidden');selectedGameForPackages=null}
+function renderActiveGamePackages(){
+  if(!selectedGameForPackages)return;
+  const game=appData.games.find(g=>g.id===selectedGameForPackages);
+  const pkgs=appData.packages[selectedGameForPackages]||[];
+  const search=(document.getElementById('package-search-input').value||'').toLowerCase();
+  const body=document.getElementById('package-table-body');body.innerHTML='';
+  const filtered=pkgs.filter(p=>p.name.toLowerCase().includes(search));
+  if(!filtered.length){body.innerHTML='<tr><td colspan="7" class="p-6 text-center text-zinc-500">ยังไม่มีแพ็กเกจ</td></tr>';return}
+  filtered.forEach(p=>{
+    const cb=(p.appPrice||0)*((game.cashbackRate||0)/100);
+    const net=(p.appPrice||0)-cb;
+    const profit=(p.customerPrice||0)-net;
+    body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+      <td class="p-3 font-semibold text-white">${p.name}</td>
+      <td class="p-3 text-center text-zinc-300">${p.amount||'-'} ${p.unit||''}</td>
+      <td class="p-3 text-right text-emerald-400 font-medium">฿${formatMoney(p.customerPrice)}</td>
+      <td class="p-3 text-right text-amber-400">฿${formatMoney(p.appPrice)}</td>
+      <td class="p-3 text-right font-bold ${profitClass(profit)}">${profitText(profit)}</td>
+      <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] ${p.status==='เปิดขาย'?'bg-emerald-950 text-emerald-400 border border-emerald-800':'bg-zinc-800 text-zinc-400'}">${p.status}</span></td>
+      <td class="p-3 text-center">
+        <div class="flex items-center justify-center gap-1">
+          <button onclick="openEditPackageModal('${p.id}')" class="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+          <button onclick="deletePackage('${p.id}')" class="p-1.5 text-red-400 hover:text-red-300 rounded hover:bg-red-950/60"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  lucide.createIcons();
+}
+function openAddGameModal(){
+  document.getElementById('game-modal-title').innerText='เพิ่มเกมใหม่';
+  document.getElementById('modal-game-id').value='';
+  document.getElementById('game-form').reset();
+  document.getElementById('game-modal').classList.remove('hidden');
+}
+function openEditGameModal(id){
+  const g=appData.games.find(x=>x.id===id);if(!g)return;
+  document.getElementById('game-modal-title').innerText='แก้ไขเกม';
+  document.getElementById('modal-game-id').value=g.id;
+  document.getElementById('modal-game-name').value=g.name;
+  document.getElementById('modal-game-cover').value=g.cover||'';
+  document.getElementById('modal-game-icon').value=g.icon||'';
+  document.getElementById('modal-game-currency').value=g.currency||'';
+  document.getElementById('modal-game-rate').value=g.cashbackRate;
+  document.getElementById('modal-game-status').value=g.status||'เปิดใช้งาน';
+  document.getElementById('modal-game-notes').value=g.notes||'';
+  document.getElementById('game-modal').classList.remove('hidden');
+}
+function closeGameModal(){document.getElementById('game-modal').classList.add('hidden')}
+function handleSaveGame(e){
+  e.preventDefault();
+  const id=document.getElementById('modal-game-id').value;
+  const data={
+    name:document.getElementById('modal-game-name').value,
+    cover:document.getElementById('modal-game-cover').value,
+    icon:document.getElementById('modal-game-icon').value,
+    currency:document.getElementById('modal-game-currency').value,
+    cashbackRate:parseFloat(document.getElementById('modal-game-rate').value)||0,
+    status:document.getElementById('modal-game-status').value,
+    notes:document.getElementById('modal-game-notes').value
+  };
+  if(id){const g=appData.games.find(x=>x.id===id);if(g)Object.assign(g,data)}
+  else{const nid='g-'+Date.now().toString().slice(-5);appData.games.push({id:nid,...data});appData.packages[nid]=[]}
+  saveState();populateGameDropdowns();renderGameManagementList();renderGamesTable();closeGameModal();showToast('บันทึกเกมสำเร็จ');
+}
+function deleteGame(id){
+  openConfirmModal('ลบเกมนี้?','แพ็กเกจทั้งหมดของเกมนี้จะถูกลบด้วย',()=>{
+    appData.games=appData.games.filter(g=>g.id!==id);
+    delete appData.packages[id];
+    saveState();populateGameDropdowns();renderGameManagementList();renderGamesTable();
+    if(selectedGameForPackages===id)closePackagePanel();
+    showToast('ลบเกมแล้ว');
+  });
+}
+function openAddPackageModal(){
+  if(!selectedGameForPackages)return;
+  document.getElementById('package-modal-title').innerText='เพิ่มแพ็กเกจใหม่';
+  document.getElementById('modal-package-id').value='';
+  document.getElementById('pkg-name').value='';
+  document.getElementById('pkg-amount').value='';
+  document.getElementById('pkg-unit').value='';
+  document.getElementById('pkg-customer-price').value='';
+  document.getElementById('pkg-app-price').value='';
+  document.getElementById('pkg-status').value='เปิดขาย';
+  updateModalProfitPreview();
+  document.getElementById('package-modal').classList.remove('hidden');
+}
+function openEditPackageModal(pid){
+  if(!selectedGameForPackages)return;
+  const pkg=(appData.packages[selectedGameForPackages]||[]).find(p=>p.id===pid);if(!pkg)return;
+  document.getElementById('package-modal-title').innerText='แก้ไขแพ็กเกจ';
+  document.getElementById('modal-package-id').value=pkg.id;
+  document.getElementById('pkg-name').value=pkg.name;
+  document.getElementById('pkg-amount').value=pkg.amount||'';
+  document.getElementById('pkg-unit').value=pkg.unit||'';
+  document.getElementById('pkg-customer-price').value=pkg.customerPrice;
+  document.getElementById('pkg-app-price').value=pkg.appPrice;
+  document.getElementById('pkg-status').value=pkg.status||'เปิดขาย';
+  updateModalProfitPreview();
+  document.getElementById('package-modal').classList.remove('hidden');
+}
+function closePackageModal(){document.getElementById('package-modal').classList.add('hidden')}
+function updateModalProfitPreview(){
+  if(!selectedGameForPackages)return;
+  const game=appData.games.find(g=>g.id===selectedGameForPackages);
+  const cp=parseFloat(document.getElementById('pkg-customer-price').value)||0;
+  const ap=parseFloat(document.getElementById('pkg-app-price').value)||0;
+  const rate=game?game.cashbackRate:0;
+  const cb=ap*(rate/100);
+  const net=ap-cb;
+  const profit=cp-net;
+  const el=document.getElementById('modal-pkg-profit-preview');
+  el.innerText=profitText(profit);
+  el.className='font-bold '+profitClass(profit);
+}
+function handleSavePackage(e){
+  e.preventDefault();
+  if(!selectedGameForPackages)return;
+  const pid=document.getElementById('modal-package-id').value;
+  const data={
+    name:document.getElementById('pkg-name').value,
+    amount:parseFloat(document.getElementById('pkg-amount').value)||0,
+    unit:document.getElementById('pkg-unit').value,
+    customerPrice:parseFloat(document.getElementById('pkg-customer-price').value)||0,
+    appPrice:parseFloat(document.getElementById('pkg-app-price').value)||0,
+    status:document.getElementById('pkg-status').value
+  };
+  if(!appData.packages[selectedGameForPackages])appData.packages[selectedGameForPackages]=[];
+  const list=appData.packages[selectedGameForPackages];
+  if(pid){const p=list.find(x=>x.id===pid);if(p)Object.assign(p,data)}
+  else list.push({id:'p-'+Date.now().toString().slice(-5),...data});
+  saveState();renderActiveGamePackages();closePackageModal();showToast('บันทึกแพ็กสำเร็จ');
+}
+function deletePackage(pid){
+  if(!selectedGameForPackages)return;
+  openConfirmModal('ลบแพ็กนี้?','',()=>{
+    appData.packages[selectedGameForPackages]=appData.packages[selectedGameForPackages].filter(p=>p.id!==pid);
+    saveState();renderActiveGamePackages();showToast('ลบแพ็กแล้ว');
+  });
+}
+
+// ========== MEMBERS ==========
+const RANK_ORDER={bronze:1,silver:2,gold:3,platinum:4,master:5,vip:6,admin:7};
+function getRankSettings(){
+  return appData.rankSettings||{silver:1000,gold:5000,platinum:15000,master:50000};
+}
+function calcAutoRank(spent){
+  const rs=getRankSettings();
+  if(spent>=(rs.master||50000)) return 'master';
+  if(spent>=(rs.platinum||15000)) return 'platinum';
+  if(spent>=(rs.gold||5000)) return 'gold';
+  if(spent>=(rs.silver||1000)) return 'silver';
+  return 'bronze';
+}
+function getMemberRank(m,spent){
+  if(m.rank && m.rank!=='auto') return m.rank;
+  return calcAutoRank(spent||0);
+}
+function rankBadgeHtml(rank){
+  const map={
+    bronze:['rank-bronze','BRONZE'],
+    silver:['rank-silver','SILVER'],
+    gold:['rank-gold','GOLD'],
+    platinum:['rank-platinum','PLATINUM'],
+    master:['rank-master','MASTER'],
+    vip:['rank-vip','VIP'],
+    admin:['rank-admin','ADMIN']
+  };
+  const [cls,label]=map[rank]||map.bronze;
+  return `<span class="rank-badge ${cls}">${label}</span>`;
+}
+function updateRankThresholds(){
+  if(!appData.rankSettings) appData.rankSettings={};
+  appData.rankSettings.silver=parseFloat(document.getElementById('rank-th-silver').value)||1000;
+  appData.rankSettings.gold=parseFloat(document.getElementById('rank-th-gold').value)||5000;
+  appData.rankSettings.platinum=parseFloat(document.getElementById('rank-th-platinum').value)||15000;
+  appData.rankSettings.master=parseFloat(document.getElementById('rank-th-master').value)||50000;
+  saveState();
+  renderMembersList();
+  showToast('อัปเดตเกณฑ์แรงค์แล้ว');
+}
+function renderMembersList(){
+  const search=(document.getElementById('member-search-input')?.value||'').toLowerCase();
+  const sort=document.getElementById('member-sort')?.value||'rank';
+  const target=appData.pointsTarget||10;
+  const st=document.getElementById('setting-points-target'); if(st) st.value=target;
+  const minAmtEl=document.getElementById('setting-min-amount-point');
+  if(minAmtEl) minAmtEl.value=appData.minAmountForPoint??100;
+  const refDiscEl=document.getElementById('setting-referral-discount');
+  if(refDiscEl) refDiscEl.value=appData.referralDiscountAmount??10;
+  const rs=getRankSettings();
+  const elS=document.getElementById('rank-th-silver'); if(elS) elS.value=rs.silver??1000;
+  const elG=document.getElementById('rank-th-gold'); if(elG) elG.value=rs.gold??5000;
+  const elP=document.getElementById('rank-th-platinum'); if(elP) elP.value=rs.platinum??15000;
+  const elM=document.getElementById('rank-th-master'); if(elM) elM.value=rs.master??50000;
+  const body=document.getElementById('members-table-body'); if(!body)return; body.innerHTML='';
+  let list=appData.members.filter(m=>(m.name||'').toLowerCase().includes(search)||(m.contact||'').toLowerCase().includes(search));
+  list=list.map(m=>{
+    const txs=appData.transactions.filter(t=>t.memberId===m.id);
+    const spent=txs.reduce((s,t)=>s+(t.customerPrice||0),0);
+    const profit=txs.reduce((s,t)=>s+(t.profit||0),0);
+    return {m,txs,cnt:txs.length,spent,profit,rank:getMemberRank(m,spent)};
+  });
+  list.sort((a,b)=>{
+    if(sort==='rank') return (RANK_ORDER[b.rank]||0)-(RANK_ORDER[a.rank]||0);
+    if(sort==='newest') return (b.m.joinedAt||'').localeCompare(a.m.joinedAt||'');
+    if(sort==='oldest') return (a.m.joinedAt||'').localeCompare(b.m.joinedAt||'');
+    if(sort==='spent_desc') return b.spent-a.spent;
+    if(sort==='spent_asc') return a.spent-b.spent;
+    if(sort==='profit_desc') return b.profit-a.profit;
+    return 0;
+  });
+  if(!list.length){body.innerHTML='<tr><td colspan="10" class="p-6 text-center text-zinc-500">ยังไม่มีสมาชิก</td></tr>';return}
+  list.forEach(({m,cnt,spent,profit,rank})=>{
+    const pts=m.points||0;
+    const wallet=m.discountWallet||0;
+    const pct=Math.min(100,Math.round((pts/target)*100));
+    const canClaim=pts>=target;
+    body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+      <td class="p-3.5 font-bold text-white">
+        <div class="flex items-center gap-2">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">${m.name} ${rankBadgeHtml(rank)}</div>
+            <div class="text-[10px] text-zinc-400 font-normal mt-0.5">${m.notes||''}${m.rank&&m.rank!=='auto'?' · ตั้งเอง':''}</div>
+          </div>
+        </div>
+      </td>
+      <td class="p-3.5 text-zinc-300 text-xs">${m.contact||'-'}</td>
+      <td class="p-3.5 text-center font-semibold">${cnt}</td>
+      <td class="p-3.5 text-right text-emerald-400">฿${formatMoney(spent)}</td>
+      <td class="p-3.5 text-right font-bold ${profitClass(profit)}">฿${formatMoney(profit)}</td>
+      <td class="p-3.5 text-right font-bold text-amber-300">฿${formatMoney(wallet)}</td>
+      <td class="p-3.5 text-center font-bold text-amber-400 text-sm">${pts} / ${target}</td>
+      <td class="p-3.5">
+        <div class="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden border border-zinc-700">
+          <div class="bg-gradient-to-r from-amber-500 to-amber-300 h-2.5 rounded-full" style="width:${pct}%"></div>
+        </div>
+        <span class="text-[10px] text-zinc-400 block mt-1 text-right">${pct}%</span>
+      </td>
+      <td class="p-3.5 text-center">
+        ${canClaim?`<button onclick="claimReward('${m.id}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg shadow animate-pulse">🎁 แลกรางวัล</button>`:`<span class="text-[11px] text-zinc-500">สะสมถึง ${target}</span>`}
+      </td>
+      <td class="p-3.5 text-center whitespace-nowrap">
+        <button onclick="openRankModal('${m.id}')" class="p-1.5 text-purple-400 hover:text-purple-300 rounded" title="แรงค์"><i data-lucide="award" class="w-4 h-4"></i></button>
+        <button onclick="deleteMember('${m.id}')" class="p-1.5 text-red-400 hover:text-red-300 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </td>
+    </tr>`;
+  });
+  lucide.createIcons();
+}
+function openRankModal(preselectId){
+  const sel=document.getElementById('rank-member-select');
+  if(sel){
+    sel.innerHTML='';
+    appData.members.forEach(m=>{
+      const spent=appData.transactions.filter(t=>t.memberId===m.id).reduce((s,t)=>s+(t.customerPrice||0),0);
+      const r=getMemberRank(m,spent);
+      sel.innerHTML+=`<option value="${m.id}" ${preselectId===m.id?'selected':''}>${m.name} (${r})</option>`;
+    });
+  }
+  document.getElementById('rank-modal')?.classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeRankModal(){document.getElementById('rank-modal')?.classList.add('hidden')}
+function handleSetRank(e){
+  e.preventDefault();
+  const mid=document.getElementById('rank-member-select').value;
+  const rank=document.getElementById('rank-value').value;
+  const m=appData.members.find(x=>x.id===mid);
+  if(!m)return;
+  m.rank=rank;
+  saveState();
+  renderMembersList();
+  closeRankModal();
+  showToast(rank==='auto'?'ตั้งเป็นแรงค์อัตโนมัติตามยอดเติม':'ตั้งแรงค์เป็น '+rank.toUpperCase());
+}
+function updatePointsTargetSetting(){
+  appData.pointsTarget=parseInt(document.getElementById('setting-points-target').value)||10;
+  saveState();renderMembersList();showToast('ตั้งเป้าหมาย '+appData.pointsTarget+' คะแนน');
+}
+function openAddMemberModal(){
+  document.getElementById('mem-name').value='';
+  document.getElementById('mem-contact').value='';
+  document.getElementById('mem-points').value=0;
+  document.getElementById('mem-notes').value='';
+  const refSel=document.getElementById('mem-referred-by');
+  if(refSel){
+    refSel.innerHTML='<option value="">-- ไม่มีผู้แนะนำ --</option>';
+    appData.members.forEach(m=>{refSel.innerHTML+=`<option value="${m.id}">${m.name}</option>`;});
+  }
+  document.getElementById('member-modal').classList.remove('hidden');
+}
+function updateReferralDiscount(){
+  const val=parseFloat(document.getElementById('setting-referral-discount').value);
+  appData.referralDiscountAmount=(isNaN(val)||val<0)?0:val;
+  saveState();
+  showToast('ตั้งส่วนลดผู้แนะนำเป็น ฿'+formatMoney(appData.referralDiscountAmount));
+}
+function closeMemberModal(){document.getElementById('member-modal').classList.add('hidden')}
+function handleSaveMember(e){
+  e.preventDefault();
+  const name=(document.getElementById('mem-name').value||'').trim();
+  const contact=(document.getElementById('mem-contact').value||'').trim();
+  if(!name){alert('กรุณากรอกชื่อสมาชิก');return}
+  const nameDup=appData.members.some(m=>(m.name||'').trim().toLowerCase()===name.toLowerCase());
+  if(nameDup){alert('มีชื่อสมาชิกนี้ในระบบแล้ว ไม่สามารถเพิ่มซ้ำได้');return}
+  if(contact){
+    const contactDup=appData.members.some(m=>(m.contact||'').trim().toLowerCase()===contact.toLowerCase());
+    if(contactDup){alert('เบอร์ / Line นี้ถูกใช้โดยสมาชิกอื่นแล้ว ไม่สามารถเพิ่มซ้ำได้');return}
+  }
+  const referredBy=document.getElementById('mem-referred-by').value||null;
+  const newId='m-'+Date.now().toString().slice(-5);
+  appData.members.push({
+    id:newId,
+    name:name,
+    contact:contact,
+    points:parseInt(document.getElementById('mem-points').value)||0,
+    notes:document.getElementById('mem-notes').value,
+    discountWallet:0,
+    referredBy:referredBy,
+    uids:[],
+    rank:'auto',
+    joinedAt:getTodayStr()
+  });
+  if(referredBy){
+    const ref=appData.members.find(m=>m.id===referredBy);
+    if(ref){
+      const amt=appData.referralDiscountAmount||0;
+      ref.discountWallet=(ref.discountWallet||0)+amt;
+      showToast('เพิ่มสมาชิกสำเร็จ + ผู้แนะนำได้รับส่วนลด ฿'+formatMoney(amt));
+    }else showToast('เพิ่มสมาชิกสำเร็จ');
+  }else showToast('เพิ่มสมาชิกสำเร็จ');
+  saveState();populateMemberDropdowns();renderMembersList();closeMemberModal();
+}
+function claimReward(mid){
+  const m=appData.members.find(x=>x.id===mid);if(!m)return;
+  const target=appData.pointsTarget||10;
+  openConfirmModal('ยืนยันแลกรางวัล?','คะแนนของ '+m.name+' จะถูกลบออก '+target+' คะแนน',()=>{
+    m.points=Math.max(0,(m.points||0)-target);
+    appData.pointsHistory.push({id:'PH-'+Date.now(),memberId:mid,memberName:m.name,action:'claim',amount:target,reason:'แลกรางวัล',date:getTodayStr(),time:new Date().toTimeString().slice(0,5)});
+    saveState();populateMemberDropdowns();renderMembersList();showToast('แลกรางวัลสำเร็จ');
+  });
+}
+function openPointsModal(){populateMemberDropdowns();document.getElementById('points-modal').classList.remove('hidden')}
+function closePointsModal(){document.getElementById('points-modal').classList.add('hidden')}
+function openWalletModal(){
+  const sel=document.getElementById('wallet-member-select');
+  if(sel){
+    sel.innerHTML='';
+    appData.members.forEach(m=>{
+      sel.innerHTML+=`<option value="${m.id}">${m.name} (กระเป๋า ฿${formatMoney(m.discountWallet||0)})</option>`;
+    });
+  }
+  updateWalletBalanceLabel();
+  document.getElementById('wallet-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+function closeWalletModal(){document.getElementById('wallet-modal').classList.add('hidden')}
+function updateWalletBalanceLabel(){
+  const mid=document.getElementById('wallet-member-select').value;
+  const m=appData.members.find(x=>x.id===mid);
+  document.getElementById('wallet-current-balance').innerText='฿'+formatMoney(m?m.discountWallet||0:0);
+}
+function handleAdjustWallet(e){
+  e.preventDefault();
+  const mid=document.getElementById('wallet-member-select').value;
+  const action=document.getElementById('wallet-action').value;
+  const amount=parseFloat(document.getElementById('wallet-amount').value)||0;
+  const m=appData.members.find(x=>x.id===mid);
+  if(!m)return;
+  if(action==='add') m.discountWallet=(m.discountWallet||0)+amount;
+  else if(action==='deduct') m.discountWallet=Math.max(0,(m.discountWallet||0)-amount);
+  else if(action==='set') m.discountWallet=Math.max(0,amount);
+  saveState();
+  populateMemberDropdowns();
+  renderMembersList();
+  closeWalletModal();
+  showToast('ปรับกระเป๋าส่วนลดแล้ว (ยอดปัจจุบัน ฿'+formatMoney(m.discountWallet)+')');
+}
+function handleAdjustPoints(e){
+  e.preventDefault();
+  const mid=document.getElementById('adj-member-select').value;
+  const action=document.getElementById('adj-action').value;
+  const amount=parseInt(document.getElementById('adj-amount').value)||0;
+  const reason=document.getElementById('adj-reason').value||'ปรับคะแนน';
+  const m=appData.members.find(x=>x.id===mid);if(!m)return;
+  if(action==='add')m.points=(m.points||0)+amount;
+  else if(action==='deduct')m.points=Math.max(0,(m.points||0)-amount);
+  else if(action==='reset')m.points=0;
+  appData.pointsHistory.push({id:'PH-'+Date.now(),memberId:mid,memberName:m.name,action,amount,reason,date:getTodayStr(),time:new Date().toTimeString().slice(0,5)});
+  saveState();populateMemberDropdowns();renderMembersList();closePointsModal();showToast('ปรับคะแนนสำเร็จ');
+}
+function deleteMember(id){
+  openConfirmModal('ลบสมาชิกนี้?','ประวัติการเติมยังคงอยู่',()=>{
+    appData.members=appData.members.filter(m=>m.id!==id);
+    saveState();populateMemberDropdowns();renderMembersList();showToast('ลบสมาชิกแล้ว');
+  });
+}
+
+// ========== HISTORY ==========
+function renderHistoryTable(){
+  const ft=document.getElementById('history-filter-type').value;
+  const search=(document.getElementById('history-search').value||'').toLowerCase();
+  const body=document.getElementById('history-table-body');body.innerHTML='';
+  let list=[];
+  if(ft==='ALL'||ft==='TX')appData.transactions.forEach(t=>list.push({...t,isExp:false}));
+  if(ft==='ALL'||ft==='EXP')appData.expenses.forEach(e=>list.push({...e,isExp:true}));
+  list.sort((a,b)=>new Date(b.date+'T'+(b.time||'00:00'))-new Date(a.date+'T'+(a.time||'00:00')));
+  list=list.filter(item=>{
+    if(item.isExp)return(item.title||'').toLowerCase().includes(search)||(item.notes||'').toLowerCase().includes(search);
+    return(item.gameName||'').toLowerCase().includes(search)||(item.item||'').toLowerCase().includes(search)||(item.memberName||'').toLowerCase().includes(search);
+  });
+  if(!list.length){body.innerHTML='<tr><td colspan="12" class="p-6 text-center text-zinc-500">ไม่พบรายการ</td></tr>';return}
+  list.forEach(item=>{
+    if(item.isExp){
+      body.innerHTML+=`<tr class="bg-red-950/20 hover:bg-red-950/40">
+        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] bg-red-900/80 text-red-200 border border-red-700 font-bold">ค่าใช้จ่าย</span></td>
+        <td class="p-3 font-mono text-zinc-400 text-[11px]">${item.id}</td>
+        <td class="p-3 text-zinc-300 text-[11px] whitespace-nowrap">${item.date} ${item.time||''}</td>
+        <td class="p-3 font-bold text-amber-400" colspan="2">${item.title}</td>
+        <td class="p-3 text-right text-zinc-500">-</td><td class="p-3 text-right text-zinc-500">-</td>
+        <td class="p-3 text-center text-zinc-500">-</td><td class="p-3 text-right text-zinc-500">-</td>
+        <td class="p-3 text-right text-zinc-500">-</td>
+        <td class="p-3 text-right font-bold text-amber-500">-฿${formatMoney(item.amount)}</td>
+        <td class="p-3 text-center"><button onclick="deleteExpense('${item.id}')" class="p-1 text-red-400 hover:text-red-300 rounded"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+      </tr>`;
+    }else{
+      body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">เติมเกม</span></td>
+        <td class="p-3 font-mono text-zinc-400 text-[11px]">${item.id}</td>
+        <td class="p-3 text-zinc-300 text-[11px] whitespace-nowrap">${item.date} ${item.time||''}</td>
+        <td class="p-3 font-semibold text-white">${item.gameName}</td>
+        <td class="p-3 text-zinc-300"><div>${item.item}</div>${item.memberName&&item.memberName!=='-'?`<div class="text-[10px] text-amber-400">👤 ${item.memberName}</div>`:''}</td>
+        <td class="p-3 text-right text-emerald-400">฿${formatMoney(item.customerPrice)}</td>
+        <td class="p-3 text-right text-amber-400">฿${formatMoney(item.appPrice)}</td>
+        <td class="p-3 text-center font-bold text-red-400">${item.cashbackRate}%</td>
+        <td class="p-3 text-right text-emerald-400">฿${formatMoney(item.cashbackAmount)}</td>
+        <td class="p-3 text-right text-amber-400">฿${formatMoney(item.netCost)}</td>
+        <td class="p-3 text-right font-bold ${profitClass(item.profit)}">${profitText(item.profit)}</td>
+        <td class="p-3 text-center"><button onclick="deleteTransaction('${item.id}')" class="p-1 text-red-400 hover:text-red-300 rounded"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+      </tr>`;
+    }
+  });
+  lucide.createIcons();
+}
+function deleteTransaction(id){
+  openConfirmModal('ลบรายการนี้?','',()=>{
+    appData.transactions=appData.transactions.filter(t=>t.id!==id);
+    saveState();renderDashboard();renderHistoryTable();renderDailySummary();showToast('ลบแล้ว');
+  });
+}
+function deleteExpense(id){
+  openConfirmModal('ลบค่าใช้จ่ายนี้?','',()=>{
+    appData.expenses=appData.expenses.filter(e=>e.id!==id);
+    saveState();renderDashboard();renderHistoryTable();showToast('ลบแล้ว');
+  });
+}
+
+// ========== EXPENSE ==========
+function openExpenseModal(){
+  setFormDefaultDateTime();
+  document.getElementById('exp-date').value=document.getElementById('form-date').value;
+  document.getElementById('exp-time').value=document.getElementById('form-time').value;
+  document.getElementById('exp-title').value='';
+  document.getElementById('exp-amount').value='';
+  document.getElementById('exp-notes').value='';
+  document.getElementById('expense-modal').classList.remove('hidden');
+}
+function closeExpenseModal(){document.getElementById('expense-modal').classList.add('hidden')}
+function handleSaveExpense(e){
+  e.preventDefault();
+  appData.expenses.unshift({
+    id:'EXP-'+Date.now().toString().slice(-5),
+    date:document.getElementById('exp-date').value,
+    time:document.getElementById('exp-time').value,
+    type:'EXP',
+    title:document.getElementById('exp-title').value,
+    amount:parseFloat(document.getElementById('exp-amount').value)||0,
+    notes:document.getElementById('exp-notes').value
+  });
+  saveState();closeExpenseModal();renderDashboard();renderHistoryTable();showToast('บันทึกค่าใช้จ่ายสำเร็จ');
+}
+
+// ========== CASHBACK TABLE ==========
+function renderGamesTable(){
+  const body=document.getElementById('games-table-body');body.innerHTML='';
+  appData.games.forEach(g=>{
+    body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+      <td class="p-4 font-bold text-white">${g.icon||'🎮'} ${g.name}</td>
+      <td class="p-4 text-center font-bold text-red-500 text-base">${g.cashbackRate}%</td>
+      <td class="p-4 text-center"><span class="px-2 py-0.5 rounded text-[10px] ${g.status==='เปิดใช้งาน'?'bg-emerald-950 text-emerald-400 border border-emerald-800':'bg-zinc-800 text-zinc-400'}">${g.status}</span></td>
+      <td class="p-4 text-zinc-400 text-xs">${g.notes||'-'}</td>
+      <td class="p-4 text-center"><button onclick="openEditGameModal('${g.id}')" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold rounded-lg">แก้ไข</button></td>
+    </tr>`;
+  });
+}
+
+// ========== MONTHLY ==========
+function renderMonthlySummary(){
+  const month=document.getElementById('monthly-month').value;
+  const year=document.getElementById('monthly-year').value;
+  const body=document.getElementById('monthly-table-body');
+  const foot=document.getElementById('monthly-table-foot');
+  body.innerHTML='';foot.innerHTML='';
+  const stats={};
+  appData.games.forEach(g=>{stats[g.id]={name:g.name,count:0,sales:0,appCost:0,cashback:0,netCost:0,profit:0}});
+  appData.transactions.forEach(t=>{
+    const[y,m]=t.date.split('-');
+    if(parseInt(m)===parseInt(month)&&y===year){
+      if(!stats[t.gameId])stats[t.gameId]={name:t.gameName,count:0,sales:0,appCost:0,cashback:0,netCost:0,profit:0};
+      const s=stats[t.gameId];
+      s.count++;s.sales+=(t.customerPrice||0);s.appCost+=(t.appPrice||0);s.cashback+=(t.cashbackAmount||0);s.netCost+=(t.netCost||0);s.profit+=(t.profit||0);
+    }
+  });
+  let gc=0,gs=0,ga=0,gcb=0,gn=0,gp=0;
+  Object.keys(stats).forEach(id=>{
+    const st=stats[id];
+    if(st.count>0){
+      gc+=st.count;gs+=st.sales;ga+=st.appCost;gcb+=st.cashback;gn+=st.netCost;gp+=st.profit;
+      body.innerHTML+=`<tr class="hover:bg-zinc-800/40">
+        <td class="p-4 font-bold text-white">${st.name}</td>
+        <td class="p-4 text-center">${st.count}</td>
+        <td class="p-4 text-right text-emerald-400">฿${formatMoney(st.sales)}</td>
+        <td class="p-4 text-right text-amber-400">฿${formatMoney(st.appCost)}</td>
+        <td class="p-4 text-right text-emerald-400">฿${formatMoney(st.cashback)}</td>
+        <td class="p-4 text-right text-amber-400">฿${formatMoney(st.netCost)}</td>
+        <td class="p-4 text-right font-bold ${profitClass(st.profit)}">฿${formatMoney(st.profit)}</td>
+      </tr>`;
+    }
+  });
+  if(gc===0)body.innerHTML='<tr><td colspan="7" class="p-6 text-center text-zinc-500">ไม่มีข้อมูลเดือนนี้</td></tr>';
+  else foot.innerHTML=`<tr>
+    <td class="p-4">รวมทั้งหมด</td><td class="p-4 text-center">${gc}</td>
+    <td class="p-4 text-right text-emerald-400">฿${formatMoney(gs)}</td>
+    <td class="p-4 text-right text-amber-400">฿${formatMoney(ga)}</td>
+    <td class="p-4 text-right text-emerald-400">฿${formatMoney(gcb)}</td>
+    <td class="p-4 text-right text-amber-400">฿${formatMoney(gn)}</td>
+    <td class="p-4 text-right font-bold text-lg ${profitClass(gp)}">฿${formatMoney(gp)}</td>
+  </tr>`;
+}
+
+// ========== EXPORT / RESET ==========
+function exportToExcel(){
+  try{
+    const wb=XLSX.utils.book_new();
+    const tx=appData.transactions.map(t=>({'เลขรายการ':t.id,'วันที่':t.date,'เวลา':t.time,'เกม':t.gameName,'แพ็ก':t.item,'ราคาลูกค้า':t.customerPrice,'ราคาแอป':t.appPrice,'%CB':t.cashbackRate,'เงินคืน':t.cashbackAmount,'ต้นทุนสุทธิ':t.netCost,'กำไร':t.profit,'สมาชิก':t.memberName||'-','หมายเหตุ':t.notes||''}));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tx),'ประวัติเติมเกม');
+    const exp=appData.expenses.map(e=>({'เลข':e.id,'วันที่':e.date,'เวลา':e.time,'รายการ':e.title,'จำนวน':e.amount,'หมายเหตุ':e.notes||''}));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(exp),'ค่าใช้จ่าย');
+    const mem=appData.members.map(m=>({'รหัส':m.id,'ชื่อ':m.name,'ติดต่อ':m.contact,'คะแนน':m.points,'หมายเหตุ':m.notes||''}));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mem),'สมาชิก');
+    XLSX.writeFile(wb,'NayMos_GameShop_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    showToast('ส่งออก Excel สำเร็จ');
+  }catch(e){alert('ส่งออกไม่สำเร็จ')}
+}
+function openResetConfirm(){document.getElementById('reset-confirm-modal').classList.remove('hidden')}
+function closeResetModal(){document.getElementById('reset-confirm-modal').classList.add('hidden')}
+function executeDataReset(){
+  appData.transactions=[];appData.expenses=[];appData.members=[];appData.pointsHistory=[];
+  saveState();closeResetModal();populateMemberDropdowns();renderDashboard();renderHistoryTable();renderMembersList();renderDailySummary();showToast('ล้างข้อมูลแล้ว');
+}
+
+// ========== INIT ==========
+window.onload=function(){
+  loadState();
+  populateYears();
+  setFormDefaultDateTime();
+  populateGameDropdowns();
+  populateMemberDropdowns();
+  const now=new Date();
+  document.getElementById('dash-month').value=String(now.getMonth()+1);
+  document.getElementById('monthly-month').value=String(now.getMonth()+1);
+  renderDashboard();
+  loadDraftForm();
+  updateInvoiceBadge();
+  lucide.createIcons();
+};
+</script>
+</body>
+</html>
